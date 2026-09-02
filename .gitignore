@@ -1,0 +1,121 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+# H-2: scripts/lib/ — shared sourceable helpers (pick_python/ensure_python311),
+# NOT a Python venv artifact. Same collision/fix pattern as !web/src/lib/ below.
+!scripts/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+.worktrees/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+*.local
+# Local YAML overrides (e.g. config.local.yaml) — dev-only settings
+# accumulated on top of tracked config/config.yaml via Settings.from_yaml.
+*.local.yaml
+*.local.yml
+
+# Logs
+*.log
+logs/
+
+# Sessions
+sessions.json
+
+# Secrets
+*.pem
+*.key
+credentials.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data (SQLite databases, uploads)
+data/
+
+# Telegram uploads
+.telegram-uploads/
+
+# Internal / development-only files
+# Внутренние артефакты superpowers (specs/plans/HANDOFF) — НЕ должны попадать в
+# деплой: сервер тянет ВЕСЬ репозиторий через git pull, и эти файлы (разборы,
+# планы, операционные хендоффы) оседали бы на проде. Убраны из отслеживания.
+docs/superpowers/
+# Внутренние доки: аудиты/безопасность/деплой-чеклист/доступ/бэклог/биллинг + дизайн-спеки.
+# Содержат прод-инфраструктуру (IP, ssh-юзер, deploy-key, реальные TG-id) → НЕ в деплой/публику.
+# Пользовательские гайды (USER-GUIDE/УСТАНОВКА/ИНСТРУКЦИЯ/КАНАЛ-ИНСТРУКЦИЯ) — остаются.
+CODE_REVIEW_FINDINGS.md
+docs/specs/
+docs/BACKLOG.md
+docs/DEPLOY.md
+docs/АУДИТ-*.md
+docs/БЕЗОПАСНОСТЬ-*.md
+docs/ДЕПЛОЙ-И-ЧЕКЛИСТ.md
+docs/ДОСТУП-*.md
+docs/БИЛЛИНГ-*.md
+# CLAUDE.md НЕ игнорируем и НЕ убираем — Никита разрешил отдавать (единственное исключение).
+Competitors/
+thoughts/
+TODO.md
+docs/implementation-pause-*.md
+docs/REBUILD_PROMPT.md
+docs/USER_GUIDE.md
+docs/VPS_DEPLOYMENT.md
+
+# Embedded sub-project (separate repo)
+docs/Vels Claude Light/
+
+# Deployed bootstraps with embedded GH_TOKEN (upload to platform.nickvels.ru)
+scripts/deployed/
+
+# Frontend
+node_modules/
+web/dist/
+web/.vite/
+web/dist_test/
+*.tsbuildinfo
+!web/src/lib/
+
+# Dev/тестовый мусор — не для коммита/деплоя (физически удаляется прун-шагом деплоя)
+docs/_playground*.md
+
+# Superpowers brainstorm companion (mockups, transient)
+.superpowers/

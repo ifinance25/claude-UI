@@ -1,0 +1,98 @@
+# Vels Claude advanced configuration
+# Production minimum values are normally stored in .env:
+# TELEGRAM_BOT_TOKEN, ALLOWED_USER_IDS, PROJECTS_DIR, SESSION_DATABASE_PATH.
+
+telegram:
+  token: "${TELEGRAM_BOT_TOKEN}"
+  chat_id: null
+
+security:
+  # Prefer ALLOWED_USER_IDS in .env for production.
+  allowed_user_ids: []
+
+projects:
+  scan_directory: "${PROJECTS_DIR}"
+
+  # Or specify explicit paths:
+  # paths:
+  #   - ~/projects/project-a
+  #   - ~/projects/project-b
+  #   - /absolute/path/to/project
+
+claude:
+  # Transport mode: sdk (default, Claude Agent SDK), cli (subprocess), tmux (persistent sessions)
+  transport: "sdk"
+
+  # Permission mode for Claude Code
+  # Options: bypassPermissions, acceptEdits, plan
+  permission_mode: "bypassPermissions"
+
+  # Timeout for Claude Code operations (minutes)
+  timeout_minutes: 30
+
+  # Maximum turns per request
+  max_turns: 100
+
+  # Maximum silence before considering stream stalled (increase if Claude is slow)
+  idle_timeout_seconds: 300
+
+  # Require per-user Anthropic API keys for non-privileged users (SP2).
+  # МЯГКИЙ СТАРТ по умолчанию (false): ключи можно задать и они работают, но НЕ
+  # обязательны — никто не блокируется, юзеры без ключа едут на подписке владельца.
+  # Включи true, когда захочешь строгий режим «каждый платит СВОИМ ключом» (Path B):
+  # тогда не-админы без ключа получают отказ, пока не зададут свой. Владелец/админы
+  # всегда используют подписку. Переопределяется env-переменной CLAUDE_REQUIRE_USER_KEY.
+  require_user_key: false
+
+display:
+  # Show token usage after each response
+  show_token_usage: true
+
+  # Show Claude Code logs during processing
+  show_logs: true
+
+  # How often to update log message (milliseconds)
+  log_update_interval_ms: 1000
+
+limits:
+  # Maximum Telegram message length
+  max_message_length: 4096
+
+  # Code blocks larger than this will be sent as files
+  code_as_file_threshold: 500
+
+persistence:
+  # SQLite database used for topic/session persistence
+  session_database_path: "data/sessions.db"
+
+web:
+  # Веб-интерфейс (FastAPI + uvicorn). В light-версии это основной интерфейс,
+  # поэтому включён по умолчанию: `python scripts/run_web.py` поднимает его без
+  # Telegram, `python -m src.main` — вместе с ботом.
+  enabled: true
+  host: "127.0.0.1"
+  port: 8765
+  jwt_ttl_days: 7
+  # jwt_secret, dev_bearer_token, and telegram_bot_username are read from .env
+
+webhooks:
+  # Приёмник внешних HTTP-вебхуков (GitHub/custom), который запускает Claude с
+  # bypassPermissions. ВЫКЛЮЧЕН по умолчанию — это потенциальный RCE-вектор.
+  # Включать ТОЛЬКО осознанно и обязательно:
+  #   - задать непустой secret (иначе сервер отдаёт 503 и ничего не принимает);
+  #   - оставить host: 127.0.0.1 (наружу — только через Caddy/nginx с секретом);
+  #   - НЕ биндить на 0.0.0.0.
+  # ВНИМАНИЕ: заполнение telegram.chat_id + webhooks.topic_id при пустом secret
+  # открывает неаутентифицированный запуск Claude — НЕ делайте так.
+  enabled: false
+  host: "127.0.0.1"
+  port: 8080
+  secret: ""
+
+# Built-in scheduler
+cron_scheduler_enabled: false
+cron_jobs:
+  - name: "Morning error digest"
+    schedule: "0 9 * * *" # Every day at 9:00 AM
+    prompt: "Check /var/log/nginx/error.log and summarize yesterday's problems."
+    topic_id: 123456 # Forum topic ID to post into

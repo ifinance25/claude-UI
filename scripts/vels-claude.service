@@ -1,0 +1,46 @@
+# scripts/vels-claude.service → /etc/systemd/system/vels-claude.service
+# Сервисный пользователь должен иметь авторизованный Claude CLI (~/.claude).
+# Путь /srv/vels-claude — поправить под факт.
+[Unit]
+Description=Vels-Claude (Telegram bot + Web UI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vels
+Group=vels
+WorkingDirectory=/srv/vels-claude
+EnvironmentFile=/srv/vels-claude/.env
+ExecStart=/srv/vels-claude/.venv/bin/python -m src.main
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=10
+ExecStartPre=/bin/sleep 3
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/home/vels
+# Sandbox-хардеринг (H-7). Код и .venv принадлежат root (0750), сервис-юзер их
+# только ЧИТАЕТ/ИСПОЛНЯЕТ — скомпрометированный Claude (bypassPermissions) не
+# может переписать свой код/venv/.env и закрепиться. Запись разрешена ТОЧЕЧНО:
+# data/ (БД сессий + scratch), HOME (~/.claude — состояние CLI), projects.
+# .env читает systemd (от root, до сброса привилегий); приложению он нужен лишь
+# на чтение (640 root:vels). Поправьте пути под факт установки.
+ReadWritePaths=/srv/vels-claude/data /home/vels /home/vels/projects
+ReadOnlyPaths=/srv/vels-claude
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vels-claude
+
+[Install]
+WantedBy=multi-user.target

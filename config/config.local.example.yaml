@@ -1,0 +1,19 @@
+# Пример локального override для config/config.yaml.
+#
+# Скопируй в `config/config.local.yaml` (он в .gitignore) и держи там
+# свои dev-настройки — они автоматически наложатся поверх
+# config/config.yaml при запуске. Удобно для:
+#   - включения web UI локально (web.enabled: true)
+#   - указания локального проекта (projects.paths)
+#   - подмены public_origin под dev vite-сервер
+#
+# Любое значение из config.yaml можно переопределить, словари
+# сливаются ключ-по-ключу, списки — заменяются целиком.
+
+projects:
+  paths:
+    - C:/Users/user/Vels-Claude
+
+web:
+  enabled: true
+  public_origin: "http://localhost:5173"

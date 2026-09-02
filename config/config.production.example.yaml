@@ -1,0 +1,20 @@
+# Production-конфиг. Скопировать в config/config.local.yaml на сервере и
+# поправить пути/домен. Секреты (jwt, пароли, токены) — в .env, не сюда.
+projects:
+  paths:
+    - /srv/projects/example   # проекты, к которым выдаём доступ
+
+web:
+  enabled: true
+  host: "127.0.0.1"           # слушаем локально, наружу — через reverse proxy
+  port: 8765
+  jwt_ttl_days: 30
+  public_origin: "https://claude.example.com"
+  cookie_secure: true         # за HTTPS-прокси
+
+# .env (рядом):
+#   TELEGRAM_BOT_TOKEN, ALLOWED_USER_IDS, PROJECTS_DIR, SESSION_DATABASE_PATH
+#   WEB_JWT_SECRET   (python -c "import secrets;print(secrets.token_hex(32))")
+#   TELEGRAM_BOT_USERNAME
+#   ADMIN_LOGIN, ADMIN_PASSWORD   (первый админ создаётся при старте)
+#   WEB_DEV_BEARER_TOKEN — оставить пустым в проде

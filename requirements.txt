@@ -1,0 +1,25 @@
+aiogram>=3.4.0
+aiosqlite>=0.20.0
+alembic>=1.13.0
+claude-agent-sdk>=0.1.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+pyyaml>=6.0
+SQLAlchemy[asyncio]>=2.0.0
+aiofiles>=23.0.0
+structlog>=24.0.0
+eval_type_backport>=0.2.0
+
+# Web UI (optional, enabled when web.enabled=true in config.yaml)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+PyJWT[crypto]>=2.8.0
+# Fernet symmetric encryption for per-user connection secrets (src/connections)
+cryptography>=42.0.0
+python-multipart>=0.0.9
+# Pinned explicitly because uvicorn[standard] extras are not always
+# resolved by pip on Windows — without these the WS handshake falls back
+# to a non-existent backend and crashes at runtime.
+websockets>=15
+httptools>=0.6
+watchfiles>=0.20

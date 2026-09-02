@@ -1,0 +1,27 @@
+# scripts/Caddyfile.example — установщик (scripts/install.sh) генерирует
+# /etc/caddy/Caddyfile автоматически. Здесь — справочные примеры обоих режимов.
+
+# Режим по IP (доступ http://<ip>/agent; рядом могут жить другие приложения —
+# добавляйте свои блоки handle_path / маршруты на этом же :80):
+# :80 {
+#     encode zstd gzip
+#     redir /agent /agent/
+#     handle_path /agent/* {
+#         reverse_proxy 127.0.0.1:8765
+#     }
+# }
+
+# Режим с доменом (авто-HTTPS Let's Encrypt; домен должен указывать на IP).
+# Security-заголовки (H-5/L-2) — те же, что генерит install.sh:
+claude.example.com {
+    encode zstd gzip
+    header {
+        -Server
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; frame-src https://oauth.telegram.org https://telegram.org; base-uri 'self'; frame-ancestors 'none'"
+    }
+    reverse_proxy 127.0.0.1:8765
+}
