@@ -1,4 +1,4 @@
-# Vels Claude advanced configuration
+# AI-Panel advanced configuration
 # Production minimum values are normally stored in .env:
 # TELEGRAM_BOT_TOKEN, ALLOWED_USER_IDS, PROJECTS_DIR, SESSION_DATABASE_PATH.
 
@@ -66,7 +66,7 @@ persistence:
   session_database_path: "data/sessions.db"
 
 web:
-  # Веб-интерфейс (FastAPI + uvicorn). В light-версии это основной интерфейс,
+  # Веб-интерфейс (FastAPI + uvicorn). Основной интерфейс панели:
   # поэтому включён по умолчанию: `python scripts/run_web.py` поднимает его без
   # Telegram, `python -m src.main` — вместе с ботом.
   enabled: true

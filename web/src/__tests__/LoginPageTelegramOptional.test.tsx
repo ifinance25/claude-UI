@@ -72,7 +72,7 @@ describe("LoginPage: Telegram-блоки зависят от того, подк�
     renderLogin();
 
     expect(
-      await screen.findByText("Войдите через Telegram, чтобы продолжить"),
+      await screen.findByText("Войдите, чтобы продолжить"),
     ).toBeInTheDocument();
     expect(screen.getByText("или через Telegram")).toBeInTheDocument();
     expect(screen.getByText("/weblogin")).toBeInTheDocument();

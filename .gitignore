@@ -100,10 +100,10 @@ docs/REBUILD_PROMPT.md
 docs/USER_GUIDE.md
 docs/VPS_DEPLOYMENT.md
 
-# Embedded sub-project (separate repo)
-docs/Vels Claude Light/
+# Старый вложенный каталог документации (не коммитить)
+docs/AI-Panel-archive/
 
-# Deployed bootstraps with embedded GH_TOKEN (upload to platform.nickvels.ru)
+# Локальные бутстрапы с секретами (не коммитить)
 scripts/deployed/
 
 # Frontend

@@ -1,78 +1,70 @@
-# Vels Claude Light — что это и как запустить
+# AI-Panel — что это и как запустить
 
-Урезанная версия Vels Claude для участников практикума: один проект, окно чата,
-документация. Всё остальное — файловый менеджер, артефакты, участники, заметки,
-переключатель размышлений, админ-панель, папки и выбор проектов — вырезано.
+Claude Code на своём сервере через браузер и, по желанию, Telegram. Несколько
+проектов, админка, файловый менеджер, участники и доступы.
 
-## Что осталось в интерфейсе
+## Что в интерфейсе
 
-| Есть | Нет |
-|---|---|
-| Чат с Claude Code (стриминг, история) | Файловый менеджер и редактор |
-| Выбор модели | Артефакты |
-| Загрузка файлов в чат | Участники и выдача доступов |
-| Документация проекта | Заметки |
-| Список своих чатов | Тоггл «Размышления» |
-| Счётчик расхода и контекста | Админ-панель |
-| Кнопка «продолжить в Telegram» | Папки и выбор проектов |
+| Есть |
+|---|
+| Чат с Claude Code (стриминг, история, модели) |
+| Список чатов, поиск, папки, диалог нового чата |
+| Файловый менеджер, редактор, артефакты |
+| Участники проекта и выдача доступов |
+| Админка: пользователи, проекты, доступы |
+| Заметки и тоггл «Размышления» |
+| Документация, счётчики расхода и контекста |
+| Кнопка «продолжить в Telegram» |
 
-Telegram-бот идёт в комплекте: `python -m src.main` поднимает его вместе с вебом.
-Из него убран выбор проекта — команда `/projects` и клавиатура выбора, — потому что
-light работает с одним проектом и привязывает его автоматически, как и веб. Остальные
-команды соответствуют тому, что осталось в интерфейсе.
+Telegram-бот: `python -m src.main` поднимает его вместе с вебом. Команда
+`/projects` выбирает проект. Без токена бота остаётся только веб
+(`scripts/run_web.py`).
 
 ## Установка на сервер
 
 ```bash
-curl -fsSL <адрес install.sh> | sudo bash
+curl -fsSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash
 ```
 
-Установщик спрашивает домен (Enter — доступ по IP через sslip.io, Caddy сам
-выпустит TLS) и затем **необязательный** токен Telegram-бота — Enter пропускает
-его, и остаётся только веб. Логин админа `admin`, пароль генерируется и
-показывается один раз в конце. Сервис в systemd: с токеном запускается
-`python -m src.main` (бот + веб), без токена — `scripts/run_web.py` (только веб).
+Установщик спрашивает домен (Enter: доступ по IP через sslip.io, Caddy сам
+выпустит TLS) и необязательный токен Telegram-бота. Логин админа `admin`,
+пароль показывается один раз в конце. С токеном systemd запускает
+`python -m src.main`, без токена — `scripts/run_web.py`.
 
-## Запуск вручную, только веб (локально или без установщика)
+## Запуск вручную, только веб
 
 ```bash
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt   # Linux/macOS: .venv/bin/python
 cd web && npm install && npm run build && cd ..
-cp .env.example .env        # заполнить: PROJECTS_DIR, WEB_JWT_SECRET, ADMIN_LOGIN, ADMIN_PASSWORD
+cp .env.example .env        # PROJECTS_DIR, WEB_JWT_SECRET, ADMIN_LOGIN, ADMIN_PASSWORD
 python scripts/run_web.py
 ```
 
 Открыть адрес из лога (по умолчанию http://127.0.0.1:8765) и войти под
-`ADMIN_LOGIN` / `ADMIN_PASSWORD` — пользователь заводится при первом старте.
+`ADMIN_LOGIN` / `ADMIN_PASSWORD`.
 
-**Порт занят?** `python scripts/run_web.py --port 8600`. На Windows дефолтный
-8765 нередко попадает в системный резерв Hyper-V (`netsh interface ipv4 show
-excludedportrange protocol=tcp` покажет диапазоны), тогда bind падает с
-winerror 10013.
+**Порт занят?** `python scripts/run_web.py --port 8600`.
 
-**Проект.** `PROJECTS_DIR` — папка, *внутри* которой лежит проект: сканируются её
-подпапки. Light работает с одним проектом; если подпапок больше, берётся первая
-и в лог уходит предупреждение с именами остальных.
+**Проект.** `PROJECTS_DIR` — папка, внутри которой лежат проекты (подпапки).
+Новые проекты добавляются в админке по имени; путь = `PROJECTS_DIR` + имя.
 
-## Проверка, что урезание на месте
+## Проверка API без сессии
 
-Вырезанные эндпоинты отдают 404, живые — 401 без авторизации:
+Живые эндпоинты без авторизации отдают 401, SPA-роуты — 200:
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/api/files/tree   # 404 — роутера нет
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/api/admin/users  # 404 — роутера нет
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/api/docs         # 401 — на месте
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/login            # 200 — SPA-роут цел
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/api/files/tree   # 401
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/api/admin/users  # 401
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/api/docs         # 401
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8600/login            # 200
 ```
 
-Раньше несуществующий `/api/*` проваливался в SPA-fallback и возвращал 200 с
-`index.html`: `resp.ok` истинно, а `resp.json()` падал на «Unexpected token <».
-Теперь catch-all пропускает мимо себя всё под `/api/` — см. `mount_frontend`.
+Catch-all SPA пропускает `/api/*` — несуществующий API отдаёт 404, не `index.html`.
 
 ## Тесты
 
 ```bash
-.venv/Scripts/python.exe -m pytest tests -q     # 817 passed, 4 skipped
-cd web && npx vitest run                        # 70 passed
+.venv/Scripts/python.exe -m pytest tests -q
+cd web && npx vitest run
 ```

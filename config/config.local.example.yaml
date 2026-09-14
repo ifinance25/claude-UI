@@ -12,7 +12,7 @@
 
 projects:
   paths:
-    - C:/Users/user/Vels-Claude
+    - C:/Users/user/AI-Panel
 
 web:
   enabled: true

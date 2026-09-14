@@ -7,15 +7,13 @@ from src.bot import onboarding
 
 
 class OnboardingMessageTests(unittest.TestCase):
-    def test_start_message_uses_vels_brand_and_topics(self) -> None:
+    def test_start_message_uses_brand_and_topics(self) -> None:
         text = onboarding.start_message()
 
-        self.assertIn("Vels Claude", text)
+        self.assertIn("AI-Panel", text)
         self.assertIn("Claude Code", text)
         self.assertIn("топик", text.lower())
-        # /projects убрана: light работает с одним проектом, он
-        # привязывается автоматически.
-        self.assertNotIn("/projects", text)
+        self.assertIn("/projects", text)
         self.assertIn("/status", text)
         self.assertIn("/settings", text)
 

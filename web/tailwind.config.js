@@ -5,18 +5,16 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          '"Source Sans 3"',
           "ui-sans-serif",
-          "-apple-system",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
+          "system-ui",
           "sans-serif",
         ],
         display: [
-          "Gilroy",
-          "ui-sans-serif",
-          "-apple-system",
-          "sans-serif",
+          '"Source Serif 4"',
+          "ui-serif",
+          "Georgia",
+          "serif",
         ],
       },
       fontSize: {

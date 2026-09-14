@@ -1,9 +1,9 @@
 """Запуск только веб-интерфейса, без Telegram-бота.
 
-Light-версия отдаётся как веб-продукт: человек ставит её на свой сервер и
-работает через браузер. Основной вход `python -m src.main` поднимает Telegram и
-без токена бота отказывается стартовать — этот вход собирает тот же стек без
-Telegram: сессии, шина событий, мост к Claude Code и веб-сервер.
+AI-Panel ставится на сервер и работает через браузер. Основной вход
+`python -m src.main` поднимает Telegram и без токена бота отказывается
+стартовать — этот вход собирает тот же стек без Telegram: сессии, шина
+событий, мост к Claude Code и веб-сервер.
 
 Запуск из корня проекта:
 
@@ -74,11 +74,9 @@ async def _serve(host: str | None, port: int | None) -> int:
         )
         return 1
 
-    # Light работает с одним проектом: выбор проектов и папок из интерфейса
-    # убран, Sidebar создаёт чаты в первом. Решение живёт в одном месте —
-    # get_light_project_paths, — потому что тот же список нужен и Telegram-входу
-    # (src/bot/core.py). Когда логика была здесь, подключение бота молча
-    # возвращало в браузер полный список проектов.
+    # Список проектов для web-only входа совпадает с Telegram: один helper
+    # get_light_project_paths (историческое имя). Когда логика была только здесь,
+    # подключение бота молча возвращало в браузер полный список проектов.
     project_paths = settings.get_light_project_paths()
 
     session_manager = SessionManager(storage_path=settings.get_session_database_path())
@@ -145,7 +143,7 @@ async def _serve(host: str | None, port: int | None) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Vels Claude Light — только веб, без Telegram")
+    parser = argparse.ArgumentParser(description="AI-Panel — только веб, без Telegram")
     parser.add_argument("--host", default=None, help="переопределяет web.host из config.yaml")
     parser.add_argument("--port", type=int, default=None, help="переопределяет web.port из config.yaml")
     args = parser.parse_args()

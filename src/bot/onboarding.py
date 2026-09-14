@@ -1,4 +1,4 @@
-"""Client-facing onboarding copy for Vels Claude Telegram flows."""
+"""Client-facing onboarding copy for AI-Panel Telegram flows."""
 from __future__ import annotations
 
 from html import escape
@@ -10,8 +10,8 @@ SERVICE_NAME = "vels-claude"
 
 def start_message() -> str:
     return (
-        "<b>Vels Claude</b>\n\n"
-        "Vels Claude дает доступ к Claude Code прямо из Telegram.\n\n"
+        "<b>AI-Panel</b>\n\n"
+        "AI-Panel дает доступ к Claude Code прямо из Telegram.\n\n"
         "<b>Как начать:</b>\n"
         "1. Каждый топик - отдельная рабочая сессия.\n"
         "2. Напишите задачу в General chat, и бот создаст топик автоматически.\n"
@@ -31,7 +31,7 @@ def start_message() -> str:
 def auth_message(*, service_name: str = SERVICE_NAME) -> str:
     return (
         "<b>Claude Code authorization</b>\n\n"
-        "The production installer checks Claude Code authorization before starting Vels Claude.\n\n"
+        "The production installer checks Claude Code authorization before starting AI-Panel.\n\n"
         "If authorization breaks later, run Claude Code as the same Linux user that runs the service:\n"
         "<code>claude</code>\n"
         "<code>claude -p \"ping\" --output-format stream-json --verbose</code>\n\n"
@@ -42,7 +42,7 @@ def auth_message(*, service_name: str = SERVICE_NAME) -> str:
 
 
 def new_session_prompt_message(*, auto_created: bool = False) -> str:
-    title = "Новая сессия Vels Claude" if auto_created else "Новая сессия"
+    title = "Новая сессия AI-Panel" if auto_created else "Новая сессия"
     lead = (
         "Топик создан автоматически. Следующий шаг - выбрать проект."
         if auto_created
@@ -59,7 +59,7 @@ def no_projects_message(projects_dir: Path | str) -> str:
     projects_path = escape(str(projects_dir))
     return (
         "<b>Проекты не найдены</b>\n\n"
-        f"Vels Claude сейчас ищет проекты здесь:\n<code>{projects_path}</code>\n\n"
+        f"AI-Panel сейчас ищет проекты здесь:\n<code>{projects_path}</code>\n\n"
         "Создайте или склонируйте папки проектов внутрь этой директории, затем запустите /projects еще раз."
     )
 
@@ -84,7 +84,7 @@ def auto_topic_failure_message() -> str:
 
 def no_session_in_topic_message() -> str:
     return (
-        "В этом топике пока нет сессии Vels Claude.\n"
+        "В этом топике пока нет сессии AI-Panel.\n"
         "Выберите проект, чтобы привязать топик к рабочей папке."
     )
 

@@ -42,7 +42,7 @@ fi
 
 # ── 3. Проверки окружения ────────────────────────────────────────────
 if [[ ! -d "$INSTALL_DIR/src" ]]; then
-    echo "ОШИБКА: не похоже на каталог установки Vels-Claude: $INSTALL_DIR" >&2
+    echo "ОШИБКА: не похоже на каталог установки AI-Panel: $INSTALL_DIR" >&2
     echo "  Укажите его явно: INSTALL_DIR=/opt/vels-claude sudo -E bash $0" >&2
     exit 1
 fi

@@ -7,4 +7,4 @@ if [[ -n "${BASH_SOURCE[0]:-}" && "${BASH_SOURCE[0]}" != "bash" ]]; then
     exec "$SCRIPT_DIR/install.sh" "$@"
 fi
 
-curl -sSL https://raw.githubusercontent.com/nick-vels/Vels-Claude/main/scripts/install.sh | bash "$@"
+curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | bash "$@"

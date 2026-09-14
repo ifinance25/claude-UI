@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Vels Claude - Update Script
+# AI-Panel - Update Script
 # ============================================================================
 #
 # Обновление одной командой:
 #
-#   curl -sSL https://agent.nickvels.ru/releases/light-update.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/update.sh | sudo bash
 #
 # Или с нестандартной директорией:
 #
-#   curl -sSL https://agent.nickvels.ru/releases/light-update.sh | sudo INSTALL_DIR=/srv/my-bot bash
+#   curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/update.sh | sudo INSTALL_DIR=/srv/my-bot bash
 #
 # Прямой запуск из приватного репо (для разработчиков, требует свой GH_TOKEN):
 #
 #   GH_TOKEN=ghp_xxx
 #   curl -sSL -H "Authorization: token $GH_TOKEN" \
-#     https://raw.githubusercontent.com/nick-vels/Vels-Claude/main/scripts/update.sh \
+#     https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/update.sh \
 #     | sudo bash
 #
 # Что делает:
@@ -212,7 +212,7 @@ PYEOF
 # ---------------------------------------------------------------------------
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-    echo "Vels Claude - Update Script"
+    echo "AI-Panel - Update Script"
     echo ""
     echo "Usage:"
     echo "  curl -sSL <url>/scripts/update.sh | sudo bash"
@@ -225,7 +225,7 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 echo ""
-echo -e "${BOLD}Vels Claude - Обновление${NC}"
+echo -e "${BOLD}AI-Panel - Обновление${NC}"
 echo "════════════════════════════════════════"
 echo ""
 
@@ -289,7 +289,7 @@ else
 fi
 
 if [ ! -f "$INSTALL_DIR/src/main.py" ]; then
-    error "$INSTALL_DIR не содержит Vels Claude."
+    error "$INSTALL_DIR не содержит AI-Panel."
     exit 1
 fi
 
@@ -312,7 +312,7 @@ if [ ! -d "$INSTALL_DIR/.git" ]; then
     warn "Это установка из релиз-архива (без git)."
     echo ""
     echo "  Чтобы обновиться — повторите команду установки:"
-    echo "    curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash"
+    echo "    curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash"
     echo ""
     echo "  Ваши .env и data/ при этом не пострадают."
     # Если backfill только что добавил ключ — рестартим, чтобы SP2 заработал сразу.
@@ -511,10 +511,9 @@ if [ -f "$INSTALL_DIR/web/package.json" ]; then
             OWNER="$(stat -c '%U' "$INSTALL_DIR" 2>/dev/null || echo root)"
             # VITE_BASE под режим: /agent/ ТОЛЬКО когда public_origin содержит
             # путь /agent ПОСЛЕ хоста (IP-режим, http://<ip>/agent). Домен вида
-            # https://agent.nickvels.ru НЕ должен срабатывать — в "https://agent"
-            # подстрока "/agent" это часть "://", а не путь (старый регэксп
-            # 'public_origin:.*/agent' ложно матчил такой домен и ломал прод,
-            # собирая ассеты на /agent/assets вместо /assets).
+            # https://host.example/agentpath НЕ должен срабатывать на подстроке
+            # внутри "://". Старый регэксп 'public_origin:.*/agent' ложно матчил
+            # такие домены и ломал прод, собирая ассеты на /agent/assets.
             VITE_BASE="/"
             if grep -qE '^[[:space:]]*public_origin:[[:space:]]*"?[a-zA-Z]+://[^/"]+/agent' "$INSTALL_DIR/config/config.local.yaml" 2>/dev/null; then
                 VITE_BASE="/agent/"
@@ -548,7 +547,7 @@ if [ -f "$INSTALL_DIR/web/package.json" ]; then
        || [ ! -f "$INSTALL_DIR/config/config.local.yaml" ]; then
         warn "Веб-интерфейс в коде есть, но на этом сервере не настроен (нет web-конфига)."
         warn "Чтобы включить веб-UI (и SP2 — хранение per-user Anthropic-ключей) — запустите установку повторно:"
-        warn "  curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash"
+        warn "  curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash"
     fi
 fi
 

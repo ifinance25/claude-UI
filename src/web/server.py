@@ -147,7 +147,7 @@ class WebServer:
                     await self._ws_forwarder.stop()
 
         self.app = FastAPI(
-            title="Vels-Claude Web UI",
+            title="AI-Panel Web UI",
             openapi_url="/api/openapi.json",
             docs_url=None,
             redoc_url=None,

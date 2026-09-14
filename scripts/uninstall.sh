@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# uninstall.sh - Vels Claude uninstaller for Ubuntu/Debian VPS.
+# uninstall.sh - AI-Panel uninstaller for Ubuntu/Debian VPS.
 #
 # Удаляет ТОЛЬКО артефакты установщика:
 #   - systemd-сервис vels-claude
@@ -41,10 +41,10 @@ die()      { log_err "$*"; exit 1; }
 
 usage() {
     cat <<EOF
-Vels Claude uninstaller
+AI-Panel uninstaller
 
 Usage:
-  curl -sSL https://agent.nickvels.ru/uninstall.sh | sudo bash
+  curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/uninstall.sh | sudo bash
   sudo bash scripts/uninstall.sh [--yes] [--keep-user]
 
 Options:
@@ -82,7 +82,7 @@ parse_args() {
 }
 
 ensure_root() {
-    [[ $EUID -eq 0 ]] || die "Run through sudo: curl -sSL https://agent.nickvels.ru/uninstall.sh | sudo bash"
+    [[ $EUID -eq 0 ]] || die "Run through sudo: curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/uninstall.sh | sudo bash"
 }
 
 # Авто-поиск директории установки в стандартных локациях.
@@ -116,7 +116,7 @@ detect_install_dir() {
 }
 
 # Главный предохранитель: убедиться, что директория действительно
-# принадлежит Vels Claude. Любая ошибка — отказ удалять.
+# принадлежит AI-Panel. Любая ошибка — отказ удалять.
 verify_install_dir() {
     local dir=$1
     [[ -n "$dir" ]] || return 1
@@ -129,7 +129,7 @@ verify_install_dir() {
     esac
     [[ -f "$dir/src/main.py" ]] || return 1
     [[ -f "$dir/scripts/install.sh" ]] || return 1
-    grep -q "Vels Claude" "$dir/scripts/install.sh" 2>/dev/null || return 1
+    grep -q "AI-Panel" "$dir/scripts/install.sh" 2>/dev/null || return 1
     return 0
 }
 
@@ -151,7 +151,7 @@ service_home_of() {
 
 # Дефолтный PROJECTS_DIR (/var/lib/vels-bot/projects) лежит ВНУТРИ home
 # сервис-юзера, а `userdel -r` сносит home целиком — вместе с кодом, который
-# человек писал через Vels Claude. Проверка ниже по строке 196 ловила только
+# человек писал через AI-Panel. Проверка ниже по строке 196 ловила только
 # случай «проекты внутри INSTALL_DIR» и этот, основной, пропускала: на живом
 # сервере файл-маркер в projects удалялся, а экран при этом печатал, что папка
 # проектов сохраняется.
@@ -178,7 +178,7 @@ is_managed_user() {
     entry="$(getent passwd "$user" 2>/dev/null || true)"
     [[ -n "$entry" ]] || return 1
     comment="$(printf '%s' "$entry" | cut -d: -f5)"
-    [[ "$comment" == "Vels Claude service account" ]]
+    [[ "$comment" == "AI-Panel service account" || "$comment" == "Vels Claude service account" ]]
 }
 
 confirm() {
@@ -199,7 +199,7 @@ main() {
     parse_args "$@"
     ensure_root
 
-    step "Vels Claude — деинсталляция"
+    step "AI-Panel — деинсталляция"
 
     detect_install_dir || true
 
@@ -217,7 +217,7 @@ main() {
                 die "PROJECTS_DIR ($projects_dir) лежит ВНУТРИ INSTALL_DIR ($INSTALL_DIR). Удаление снесло бы ваши проекты — отказ. Перенесите проекты вне $INSTALL_DIR и запустите снова."
             fi
         else
-            die "$INSTALL_DIR не похож на установку Vels Claude (нет маркеров). Удаление отменено."
+            die "$INSTALL_DIR не похож на установку AI-Panel (нет маркеров). Удаление отменено."
         fi
     fi
 
@@ -354,7 +354,7 @@ main() {
     step "Готово"
     cat <<EOF
 
-Vels Claude удалён.
+AI-Panel удалён.
 
 Сохранено (удалить вручную при необходимости):
 EOF

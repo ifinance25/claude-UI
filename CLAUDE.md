@@ -2,14 +2,13 @@
 
 ## Обзор
 
-**Vels Claude Light** — Claude Code, поднятый на сервере и доступный через
-браузер. Веб — основной интерфейс; Telegram-бот идёт в комплекте, но
-**необязателен**: без токена сервис поднимает только веб.
+**AI-Panel** — Claude Code на своём сервере, доступный через браузер. Веб —
+основной интерфейс; Telegram-бот идёт в комплекте, но **необязателен**: без
+токена сервис поднимает только веб.
 
-Версия рассчитана на **одного человека и один проект**. Это урезанная копия
-полной Vels Claude: из неё вырезаны файловый менеджер, артефакты, участники и
-выдача доступов, заметки, переключатель размышлений, админ-панель, папки и
-выбор проектов.
+Панель рассчитана на личную работу и небольшую команду: несколько проектов,
+админка, файлы, участники и доступы. Источник кода:
+[ifinance25/claude-UI](https://github.com/ifinance25/claude-UI).
 
 **Стек:** Python 3.11+, FastAPI + uvicorn, React 19 + Vite + Tailwind,
 aiogram 3.26 (Telegram), Claude Agent SDK / Claude Code CLI, SQLAlchemy +
@@ -17,31 +16,28 @@ SQLite, structlog.
 
 ---
 
-## Чего в этой версии нет
+## Что есть в интерфейсе
 
-Прежде чем чинить «пропавшую» функцию — проверьте, не вырезана ли она
-намеренно. Удалены целиком:
-
-| Что | Где было |
+| Что | Где |
 |---|---|
-| Файловый менеджер с редактором и поиском | `src/web/routes_files.py`, `web/src/components/files/` |
-| Артефакты Claude | там же (`/api/files/artifacts`) |
-| Участники проекта, выдача доступов | `src/web/routes_members.py`, `ProjectMembersPanel.tsx` |
-| Админ-панель (пользователи, проекты, доступы) | `src/web/routes_admin.py`, `web/src/routes/AdminPage.tsx`, `components/admin/` |
-| Заметки к чату (UI) | панель в `Chat.tsx` |
-| Тоггл «Размышления» в шапке | кнопка в `Chat.tsx` |
-| Выбор проекта, папки, диалог нового чата | секция в `Sidebar.tsx`, `NewChatDialog.tsx` |
-| Выбор проекта в Telegram | `/projects`, колбэк `project:`, `create_project_keyboard` |
+| Чат с Claude Code (стриминг, история, модели) | `web/src/components/Chat.tsx`, `MessageInput.tsx` |
+| Список чатов, поиск, папки, новый чат | `Sidebar.tsx`, `NewChatDialog.tsx` |
+| Файловый менеджер, редактор, поиск | `src/web/routes_files.py`, `web/src/components/files/` |
+| Артефакты Claude | `/api/files/artifacts`, `components/artifacts/` |
+| Участники проекта и выдача доступов | `src/web/routes_members.py`, `ProjectMembersPanel.tsx` |
+| Админка: пользователи, проекты, доступы | `src/web/routes_admin.py`, `AdminPage.tsx`, `components/admin/` |
+| Заметки к чату и тоггл «Размышления» | панель и кнопка в `Chat.tsx` |
+| Документация | `routes_docs.py`, `docs/USER-GUIDE.md` |
+| Настройки, ключи API, подключения MCP | `SettingsPage.tsx`, `routes_settings.py`, `routes_connections.py` |
 
-Проект один и привязывается автоматически — `src/bot/single_project.py`. Тот же
-список проектов отдаёт `Settings.get_light_project_paths()`, и его спрашивают оба
-входа: `scripts/run_web.py` и `python -m src.main`. Пока ограничение жило только в
-первом, подключение Telegram молча возвращало в браузер полный список.
+Заголовок чата берётся из первого сообщения (`deriveTitle` → `patchSessionNotes`).
+Скачивание файлов из ленты: `/api/sessions/{uuid}/file`.
 
-`notes` в данных **остались**: из них берётся заголовок чата (первое сообщение
-→ `deriveTitle` → `patchSessionNotes`). Роут `/api/sessions/{uuid}/file` тоже
-остался — по нему скачиваются файлы, о которых сообщает `FileArtifactEvent` в
-ленте.
+Telegram: команда `/projects` и клавиатура выбора проекта остаются; веб тоже
+умеет выбирать проект. `src/bot/single_project.py` и
+`Settings.get_light_project_paths()` по-прежнему отдают **первый** проект из
+`PROJECTS_DIR`, если список путей не задан явно. Админка пишет проекты в БД и
+раздаёт доступы поверх этого.
 
 ---
 
@@ -56,8 +52,7 @@ SQLite, structlog.
 кодом 1. Установщик это учитывает: `scripts/install.sh` пишет в systemd-юнит
 `run_web.py`, когда токена нет, и `-m src.main`, когда есть.
 
-`run_web.py` дополнительно ограничивает набор проектов первым (light работает с
-одним) и принимает `--host` / `--port`.
+`run_web.py` принимает `--host` / `--port`.
 
 ---
 
@@ -105,8 +100,8 @@ src/web/  (FastAPI)                      src/bot/
                     Claude Code
 ```
 
-Ключевое: веб и Telegram не знают друг о друге — оба говорят с шиной событий.
-Поэтому web-only вход собирается из тех же кусков, просто без `src/bot`.
+Веб и Telegram не знают друг о друге: оба говорят с шиной событий. Web-only
+вход собирается из тех же кусков, без `src/bot`.
 
 **Слои:**
 
@@ -117,12 +112,10 @@ src/web/  (FastAPI)                      src/bot/
 - `src/claude/` — мост к Claude Code (`bridge.py`), сессии и БД (`session.py`),
   нативные команды, файрвол инструментов, скиллы, модели.
 - `src/event_bus/` — шина событий и релей запросов к Claude.
-- `src/bot/` — Telegram: ядро, хендлеры, онбординг. В light не тронут.
+- `src/bot/` — Telegram: ядро, хендлеры, онбординг, выбор проекта.
 - `src/connections/`, `src/apikeys/` — per-user MCP-подключения и Anthropic-ключи.
-- `web/src/` — фронт: `components/Chat.tsx` (лента и шапка), `Sidebar.tsx`
-  (чаты и поиск), `MessageInput.tsx` (ввод, модель, вложения, стоп),
-  `routes/` (Login, Chat, Settings), `api/` (REST и WS), `lib/` (типы, темы,
-  контекст, заголовки чатов).
+- `web/src/` — фронт: чат и шапка, сайдбар, ввод, админка, файлы, маршруты
+  Login / Chat / Settings / Admin.
 
 ---
 
@@ -164,24 +157,28 @@ src/web/  (FastAPI)                      src/bot/
 
 | Переменная | Назначение |
 |---|---|
-| `PROJECTS_DIR` | папка, **внутри** которой лежит проект (сканируются подпапки) |
+| `PROJECTS_DIR` | папка, **внутри** которой лежат проекты (сканируются подпапки) |
 | `ADMIN_LOGIN` / `ADMIN_PASSWORD` | первый админ; заводится при старте, если такого логина нет |
-| `WEB_JWT_SECRET` | подпись cookie `vels_session` |
+| `WEB_JWT_SECRET` | подпись cookie сессии (`vels_session`) |
 | `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` | авторизация Claude |
 | `SESSION_DATABASE_PATH` | SQLite с чатами (`data/sessions.db`) |
 | `CONNECTIONS_SECRET_KEY` | Fernet-ключ для секретов Connect Services; без него фича спит |
 | `TELEGRAM_BOT_TOKEN`, `ALLOWED_USER_IDS` | Telegram; пусто → веб-only |
 
 `config/config.yaml` — модель, транспорт (`sdk`/`cli`/`tmux`), режим
-разрешений, таймауты, `web.enabled` (в light по умолчанию `true`), host/port.
+разрешений, таймауты, `web.enabled` (по умолчанию `true`), host/port.
 После правки: `systemctl restart vels-claude`.
+
+Имена systemd-юнита, пользователя `vels-bot` и каталога `/opt/vels-claude`
+оставлены как есть: так стоит прод. Менять их только вместе с установщиком и
+уже работающим сервером.
 
 ---
 
 ## Развёртывание
 
 `scripts/install.sh` — production-установщик под Ubuntu/Debian: ставит
-зависимости и Claude Code CLI, создаёт сервис-юзера, скачивает релиз-архив,
+зависимости и Claude Code CLI, создаёт сервис-юзера, клонирует этот репозиторий,
 собирает фронт, пишет `.env`, поднимает Caddy с TLS (домен или sslip.io),
 ставит systemd-юнит, открывает firewall, проверяет доступность снаружи.
 
@@ -223,5 +220,4 @@ src/web/  (FastAPI)                      src/bot/
   иначе вредоносный `.mcp.json` в проекте стартовал бы subprocess до
   PreToolUse-файрвола.
 
-В light пользователь один и он же владелец, поэтому на практике работает
-первый путь; второй остаётся в коде и включается `CONNECTIONS_SECRET_KEY`.
+Второй путь включается `CONNECTIONS_SECRET_KEY`.

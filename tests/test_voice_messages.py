@@ -72,7 +72,7 @@ class VoiceMessageHandlerTests(unittest.IsolatedAsyncioTestCase):
             chat_id=1234,
             message_thread_id=321,
             text=(
-                "<b>Новая сессия Vels Claude Light</b>\n\n"
+                "<b>Новая сессия AI-Panel</b>\n\n"
                 "Топик создан автоматически, проект подключён.\n\n"
                 "Отправьте первую задачу, файл, скриншот или команду Claude."
             ),
