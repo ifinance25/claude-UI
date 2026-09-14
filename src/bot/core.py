@@ -180,6 +180,7 @@ class TelegramClaudeBot:
             scratch_dir=settings.get_scratch_dir(),
             connections_store=self.connections_store,
             api_key_store=self.api_key_store,
+            projects_dir=settings.get_projects_directory(),
         )
 
         # Setup middleware

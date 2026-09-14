@@ -93,6 +93,7 @@ class WebServer:
         scratch_dir: str | Path | None = None,
         connections_store: Any = None,
         api_key_store: Any = None,
+        projects_dir: str | Path | None = None,
     ) -> None:
         self.settings = settings
         self.allowed_user_ids = allowed_user_ids
@@ -118,6 +119,9 @@ class WebServer:
         # Хранилище per-user Anthropic API-ключей (SP2). None → фича выключена
         # (CONNECTIONS_SECRET_KEY не задан) — /api/apikey тогда отвечает 501.
         self.api_key_store = api_key_store
+        self.projects_dir = Path(
+            projects_dir or "/var/lib/vels-bot/projects"
+        )
 
         self._uvicorn_server: uvicorn.Server | None = None
         self._serve_task: asyncio.Task | None = None
@@ -376,7 +380,7 @@ class WebServer:
                     session_manager=self.session_manager,
                     allowed_user_ids=self.allowed_user_ids,
                     api_key_store=self.api_key_store,
-                    projects_dir=self.settings.get_projects_directory(),
+                    projects_dir=self.projects_dir,
                 )
             )
             # Self-service шеринг проекта: участники управляются владельцем

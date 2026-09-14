@@ -122,6 +122,7 @@ async def _serve(host: str | None, port: int | None) -> int:
         scratch_dir=settings.get_scratch_dir(),
         connections_store=connections_store,
         api_key_store=api_key_store,
+        projects_dir=settings.get_projects_directory(),
     )
 
     await persister.start()
