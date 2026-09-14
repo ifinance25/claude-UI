@@ -2,7 +2,7 @@
 # Сервисный пользователь должен иметь авторизованный Claude CLI (~/.claude).
 # Путь /srv/vels-claude — поправить под факт.
 [Unit]
-Description=Vels-Claude (Telegram bot + Web UI)
+Description=AI-Panel (Telegram bot + Web UI)
 After=network-online.target
 Wants=network-online.target
 

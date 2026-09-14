@@ -69,7 +69,7 @@ async def _get_upload_context(message: Message):
         return None
 
     if not topic_id:
-        await message.answer("Загружайте файлы внутри топика Vels Claude после выбора проекта.")
+        await message.answer("Загружайте файлы внутри топика AI-Panel после выбора проекта.")
         return None
 
     session = await session_manager.async_get_session(topic_id)

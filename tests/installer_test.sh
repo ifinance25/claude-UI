@@ -216,14 +216,14 @@ assert_contains "$web_cfg" 'port: 8765' "web config default internal port 8765"
 
 echo "== render_systemd_unit =="
 unit="$(SERVICE_USER=alice SERVICE_GROUP=alice SERVICE_HOME=/home/alice INSTALL_DIR=/opt/vels-claude SERVICE_NAME=vels-claude render_systemd_unit)"
-assert_contains "$unit" "Description=Vels Claude (Web)" "unit description (web-only без токена)"
+assert_contains "$unit" "Description=AI-Panel (Web)" "unit description (web-only без токена)"
 assert_contains "$unit" "User=alice" "unit user"
 assert_contains "$unit" "Group=alice" "unit group"
 assert_contains "$unit" "WorkingDirectory=/opt/vels-claude" "unit working dir"
 assert_contains "$unit" "EnvironmentFile=/opt/vels-claude/.env" "unit env file"
 assert_contains "$unit" "ExecStart=/opt/vels-claude/.venv/bin/python /opt/vels-claude/scripts/run_web.py" "unit exec (web-only без токена)"
 bot_unit="$(SERVICE_USER=alice SERVICE_GROUP=alice SERVICE_HOME=/home/alice INSTALL_DIR=/opt/vels-claude SERVICE_NAME=vels-claude CFG_TOKEN=123456:AAFabc render_systemd_unit)"
-assert_contains "$bot_unit" "Description=Vels Claude (Telegram + Web)" "unit description (с токеном)"
+assert_contains "$bot_unit" "Description=AI-Panel (Telegram + Web)" "unit description (с токеном)"
 assert_contains "$bot_unit" "ExecStart=/opt/vels-claude/.venv/bin/python -m src.main" "unit exec (с токеном)"
 assert_contains "$unit" "Environment=HOME=/home/alice" "unit home"
 assert_fail "unit has no privileged-port capability (Caddy fronts :80)" grep -q "AmbientCapabilities" <<<"$unit"
@@ -311,10 +311,10 @@ assert_eq "$CFG_WEB_MODE" "ip" "https bare-ip is not domain mode"
 echo "== installer constants =="
 assert_eq "$SERVICE_NAME" "vels-claude" "default service name"
 assert_eq "$INSTALL_DIR" "/opt/vels-claude" "default install dir"
-# Light раздаётся из ПУБЛИЧНОГО репозитория: git-путь установщика должен вести
-# туда, иначе клон без токена упирается в приватный Vels-Claude.
-assert_eq "$REPO_NAME" "vels-claude-light" "default repo name matches public light repo"
-assert_contains "$REPO_URL" "github.com/nick-vels/vels-claude-light.git" "repo url points at public light repo"
+# Репозиторий этой панели: git-путь установщика должен вести
+# на ifinance25/claude-UI.
+assert_eq "$REPO_NAME" "claude-UI" "default repo name matches this repository"
+assert_contains "$REPO_URL" "github.com/ifinance25/claude-UI.git" "repo url points at this repository"
 
 echo "== claude auth command =="
 SERVICE_USER="alice"
@@ -376,7 +376,7 @@ _ids_probe="$(
     TELEGRAM_BOT_TOKEN='123456:AAFabcdefghijklmnopqrstuvwxyz1234567' bash -c '
         set -uo pipefail
         source "'"$ROOT_DIR"'/scripts/install.sh"
-        getme_check() { printf "Velstestbot"; }
+        getme_check() { printf "Paneltestbot"; }
         existing_env_value() { printf ""; }
         die() { printf "DIED: %s\n" "$1"; exit 42; }
         log_info() { :; }; log_ok() { :; }; log_err() { :; }
@@ -410,7 +410,7 @@ echo "== uninstall: home с проектами внутри не сноситс�
 # была, но проверяла другой случай — «проекты внутри INSTALL_DIR».
 #
 # Файл-маркер «МОЙ КОД, ПОТЕРЯ = БАГ» после удаления исчезал. Для участника это
-# значит потерю всего, что он писал через Vels Claude, — молча и с обещанием
+# значит потерю всего, что он писал через AI-Panel, — молча и с обещанием
 # обратного на экране.
 #
 # uninstall.sh source-безопасен (guard `(return 0) || main`), поэтому дёргаем

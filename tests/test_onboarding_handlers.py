@@ -10,7 +10,7 @@ from src.bot.handlers import callbacks, commands, messages
 
 
 class OnboardingHandlerTests(unittest.IsolatedAsyncioTestCase):
-    async def test_start_uses_vels_claude_copy(self) -> None:
+    async def test_start_uses_product_copy(self) -> None:
         message = SimpleNamespace(
             chat=SimpleNamespace(id=1),
             from_user=SimpleNamespace(username="tester"),
@@ -22,7 +22,7 @@ class OnboardingHandlerTests(unittest.IsolatedAsyncioTestCase):
         await commands.cmd_start(message, SimpleNamespace(args=None))
 
         text = message.answer.await_args.args[0]
-        self.assertIn("Vels Claude", text)
+        self.assertIn("AI-Panel", text)
         self.assertIn("Claude Code", text)
         self.assertIn("General chat", text)
         self.assertEqual(message.answer.await_args.kwargs["parse_mode"], "HTML")
@@ -40,7 +40,7 @@ class OnboardingHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("journalctl -u vels-claude", text)
         self.assertEqual(message.answer.await_args.kwargs["parse_mode"], "HTML")
 
-    async def test_no_session_prompts_with_vels_copy(self) -> None:
+    async def test_no_session_prompts_with_product_copy(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "demo"
             project.mkdir()

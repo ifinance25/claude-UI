@@ -75,7 +75,7 @@ async def test_docs_guide_returns_markdown(server):
         resp = await client.get("/api/docs/guide")
     assert resp.status_code == 200
     data = resp.json()
-    assert "content" in data and "Vels Claude" in data["content"]
+    assert "content" in data and "AI-Panel" in data["content"]
 
 
 async def test_docs_guide_requires_auth(server):

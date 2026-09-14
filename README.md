@@ -1,24 +1,13 @@
-```
-__     __    _        ____  _                _         _     _       _     _
-\ \   / /__ | |___   / ___|| | __ _ _   _  __| | ___  | |   (_) __ _| |__ | |_
- \ \ / / _ \| / __| | |    | |/ _` | | | |/ _` |/ _ \ | |   | |/ _` | '_ \| __|
-  \ V / (_) | \__ \ | |___ | | (_| | |_| | (_| |  __/ | |___| | (_| | | | | |_
-   \_/ \___/|_|___/  \____||_|\__,_|\__,_|\__,_|\___| |_____|_|\__, |_| |_|\__|
-                                                               |___/
-```
-
-# Vels Claude Light
+# AI-Panel
 
 Claude Code на вашем сервере, доступный через браузер. Пишете как в обычном
-чате — он читает и правит файлы вашего проекта, запускает команды, отвечает на
-вопросы. Компьютер держать включённым не нужно: работает сервер.
+чате: он читает и правит файлы проекта, запускает команды, отвечает на вопросы.
+Компьютер держать включённым не нужно: работает сервер.
 
-Версия рассчитана на **одного человека и один проект**. Файловый менеджер,
-артефакты, несколько проектов, доступы для сотрудников и админ-панель — это
-полная версия Vels Claude.
+В панели: несколько проектов, админка, файловый менеджер, артефакты, участники
+и доступы. Telegram-бот в комплекте, но **не обязателен**: при установке его
+можно пропустить и подключить позже.
 
-Telegram-бот идёт в комплекте, но **не обязателен**: при установке его можно
-пропустить и подключить когда угодно потом.
 
 ---
 
@@ -37,7 +26,7 @@ Telegram-бот идёт в комплекте, но **не обязателен
 ## Установка одной командой
 
 ```bash
-curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash
 ```
 
 Установщик задаст три вопроса — домен, ключ Claude, токен Telegram-бота — и
@@ -47,7 +36,7 @@ curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash
 Без вопросов, только веб:
 
 ```bash
-curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo \
+curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo \
   ANTHROPIC_API_KEY=sk-ant-ВАШ_КЛЮЧ \
   bash
 ```
@@ -55,7 +44,7 @@ curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo \
 Со своим доменом и HTTPS (A-запись домена должна указывать на IP сервера):
 
 ```bash
-curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo \
+curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo \
   DOMAIN=claude.ваш-домен.ru \
   ANTHROPIC_API_KEY=sk-ant-ВАШ_КЛЮЧ \
   bash
@@ -76,8 +65,8 @@ curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo \
      /var/lib/vels-bot/projects/ваш-проект
    ```
 
-   Перезапуск не нужен — проект появится сам. Light показывает один проект: если
-   подпапок несколько, берётся первая по алфавиту.
+   Перезапуск не нужен: проект появится в списке. Новые проекты также создаются
+   в админке по имени (путь = `PROJECTS_DIR` + имя).
 4. Напишите Claude любое сообщение.
 
 ---
@@ -85,11 +74,11 @@ curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo \
 ## Что в интерфейсе
 
 - **Чат** с историей и стримингом ответа, кнопка **Стоп**.
-- **Список чатов** слева с поиском; название подставляется из первого сообщения.
-- **Выбор модели** рядом с полем ввода — Opus, Sonnet, Haiku и прочие доступные.
-- **Вложения** — файл к сообщению по скрепке.
-- **Документация** — памятка и `docs/` вашего проекта.
-- **Счётчики** расхода токенов, стоимости и заполнения контекстного окна.
+- **Список чатов** слева с поиском, папками и новым чатом.
+- **Админка** — пользователи, проекты, доступы.
+- **Файлы и артефакты**, участники проекта.
+- **Выбор модели** рядом с полем ввода.
+- **Вложения**, документация, счётчики токенов и контекста.
 
 Как этим пользоваться — [docs/USER-GUIDE.md](docs/USER-GUIDE.md).
 
@@ -120,7 +109,7 @@ curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo \
 
 ```bash
 # обновление — та же команда установки, данные не трогаются
-curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash
 
 # удаление (папка проектов и авторизация Claude сохраняются)
 sudo bash /opt/vels-claude/scripts/uninstall.sh
@@ -185,6 +174,6 @@ cd web && npx vitest run
 | Чат не отвечает, Claude не авторизован | `echo 'ANTHROPIC_API_KEY=sk-ant-...' \| sudo tee -a /opt/vels-claude/.env` и `systemctl restart vels-claude` |
 | Claude Code CLI не найден | `npm install -g @anthropic-ai/claude-code`, проверить `claude --version`, повторить установку |
 | Проект не виден | Проверьте `PROJECTS_DIR` в `.env`; проект должен лежать **подпапкой** внутри неё |
-| Виден не тот проект | В папке несколько подпапок — Light берёт первую по алфавиту |
+| Виден не тот проект | Выберите нужный в сайдбаре или в админке; проверьте `PROJECTS_DIR` |
 | Бот не отвечает, веб работает | Ваш ID в `ALLOWED_USER_IDS`, бот — админ форум-группы с правом «Управление темами» |
 | Сервис не стартует | `systemctl status vels-claude` и `journalctl -u vels-claude -n 50 --no-pager` |

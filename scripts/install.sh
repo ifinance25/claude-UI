@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh - Vels Claude production installer for Ubuntu/Debian VPS.
+# install.sh - AI-Panel production installer for Ubuntu/Debian VPS.
 # Веб-интерфейс ставится всегда; Telegram-бот — необязательный шаг (Enter пропускает).
 # Safe to re-run. Sourceable by tests; main runs only when executed.
 
@@ -17,8 +17,8 @@ export DEBIAN_FRONTEND=noninteractive
 
 INSTALL_DIR="${INSTALL_DIR:-/opt/vels-claude}"
 GH_TOKEN="${GH_TOKEN:-}"
-REPO_OWNER="${REPO_OWNER:-nick-vels}"
-REPO_NAME="${REPO_NAME:-vels-claude-light}"
+REPO_OWNER="${REPO_OWNER:-ifinance25}"
+REPO_NAME="${REPO_NAME:-claude-UI}"
 if [[ -n "$GH_TOKEN" ]]; then
     REPO_URL="${REPO_URL:-https://oauth2:${GH_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git}"
 else
@@ -92,7 +92,7 @@ unset _VELS_INSTALL_SH_DIR
 print_banner() {
     cat <<'EOF'
 
-Vels Claude - production installer
+AI-Panel - production installer
 Full Telegram Claude Code bot for Ubuntu/Debian VPS
 
 EOF
@@ -286,7 +286,7 @@ resolve_service_user() {
         return 0
     fi
 
-    die "Root privileges are required. Run: curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash"
+    die "Root privileges are required. Run: curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash"
 }
 
 migrate_invoker_claude_session() {
@@ -428,10 +428,10 @@ render_systemd_unit() {
     # выходит с кодом 1) — сервис уходил бы в рестарт-петлю. Поэтому web-only
     # установка запускается через scripts/run_web.py: тот же стек без Telegram.
     local exec_start="${INSTALL_DIR}/.venv/bin/python -m src.main"
-    local unit_description="Vels Claude (Telegram + Web)"
+    local unit_description="AI-Panel (Telegram + Web)"
     if [[ -z "${CFG_TOKEN:-}" ]]; then
         exec_start="${INSTALL_DIR}/.venv/bin/python ${INSTALL_DIR}/scripts/run_web.py"
-        unit_description="Vels Claude (Web)"
+        unit_description="AI-Panel (Web)"
     fi
     cat <<EOF
 [Unit]
@@ -517,7 +517,7 @@ check_os() {
 }
 
 ensure_root() {
-    [[ $EUID -eq 0 ]] || die "Run through sudo: curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash"
+    [[ $EUID -eq 0 ]] || die "Run through sudo: curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash"
     SUDO=""
 }
 
@@ -583,7 +583,7 @@ create_service_user_if_needed() {
         --user-group \
         --home-dir "$SERVICE_HOME" \
         --shell /usr/sbin/nologin \
-        --comment "Vels Claude service account" \
+        --comment "AI-Panel service account" \
         "$SERVICE_USER"
     SERVICE_GROUP="$SERVICE_USER"
     log_ok "Created service user: $SERVICE_USER"
@@ -734,7 +734,7 @@ default_projects_dir() {
 }
 
 prompt_onboarding() {
-    step "Vels Claude configuration"
+    step "AI-Panel configuration"
     # Спрашиваем ТОЛЬКО то, что уникально для клиента: токен бота и его
     # Telegram ID. Остальное (папка проектов, админ-пароль, адрес) — авто.
     # Любое значение можно передать через окружение → установка без вопросов:
@@ -1322,12 +1322,12 @@ install_or_update_repo() {
     # поэтому cp не может их затереть (повторный запуск = безопасное обновление).
     if [[ -n "${RELEASE_SRC:-}" ]]; then
         [[ -f "$RELEASE_SRC/src/main.py" ]] \
-            || die "RELEASE_SRC=$RELEASE_SRC не похоже на исходники Vels Claude (нет src/main.py)."
+            || die "RELEASE_SRC=$RELEASE_SRC не похоже на исходники AI-Panel (нет src/main.py)."
         # Не затираем ЧУЖОЙ непустой каталог (как и git-путь делает die). Нашу
         # установку узнаём по src/main.py; пустой/новый каталог — ок.
         if [[ -e "$INSTALL_DIR" && -n "$(ls -A "$INSTALL_DIR" 2>/dev/null)" \
               && ! -f "$INSTALL_DIR/src/main.py" ]]; then
-            die "$INSTALL_DIR непустой и не похож на установку Vels Claude. Удалите его или задайте INSTALL_DIR=/srv/vels-claude."
+            die "$INSTALL_DIR непустой и не похож на установку AI-Panel. Удалите его или задайте INSTALL_DIR=/srv/vels-claude."
         fi
         mkdir -p "$INSTALL_DIR"
         # Сносим stale .git от старой git-установки: её remote с протухшим
@@ -1686,7 +1686,7 @@ print_success() {
 
     cat <<EOF
 
-Vels Claude installation complete.
+AI-Panel installation complete.
 
 Service:        $SERVICE_NAME
 Install path:   $INSTALL_DIR

@@ -1,1 +1,1 @@
-"""Vels-Claude Web UI backend."""
+"""AI-Panel Web UI backend."""

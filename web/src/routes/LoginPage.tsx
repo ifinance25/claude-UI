@@ -156,11 +156,11 @@ export default function LoginPage() {
         <div className="mx-auto mb-8 flex h-20 w-20 animate-iconPop items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--fg-primary)]">
           <SparklesIcon size={40} />
         </div>
-        <h1 className="text-3xl font-semibold text-[var(--fg-primary)]">
-          Vels-Claude
+        <h1 className="font-display text-4xl font-normal tracking-tight text-[var(--fg-primary)]">
+          AI-Panel
         </h1>
         <p className="mt-2 text-base text-[var(--fg-muted)]">
-          Войдите через Telegram, чтобы продолжить
+          Войдите, чтобы продолжить
         </p>
 
         {/* Вход по логину/паролю (локальные аккаунты от админа) */}
@@ -193,7 +193,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting || !username.trim() || !password}
-            className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-[15px] font-medium text-[var(--bg-canvas)] hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-xl bg-[var(--accent-brand)] px-4 py-3 text-[15px] font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {submitting ? "Вход…" : "Войти"}
           </button>

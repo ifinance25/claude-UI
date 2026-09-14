@@ -248,7 +248,7 @@ export default function MessageInput({
           )}
         </AnimatePresence>
 
-        <div className="flex flex-col gap-3 rounded-3xl bg-[var(--bg-input)] px-5 py-4 shadow-md ring-1 ring-[var(--border-subtle)] focus-within:ring-2 focus-within:ring-[var(--border-subtle)]">
+        <div className="flex flex-col gap-3 rounded-[28px] bg-[var(--bg-elevated)] px-5 py-4 shadow-[var(--shadow-composer)] ring-1 ring-[var(--border-subtle)] focus-within:ring-[var(--fg-muted)]">
           {/* Превью прикреплённых файлов */}
           {(attachments.length > 0 || uploading || uploadError) && (
             <div className="flex flex-wrap gap-2">
@@ -382,7 +382,7 @@ export default function MessageInput({
               <button
                 type="button"
                 onClick={() => onStop?.()}
-                className="icon-btn rounded-full bg-[var(--accent)] p-2.5 text-[var(--bg-canvas)] transition-colors hover:opacity-90"
+                className="icon-btn rounded-full bg-[var(--accent)] p-2.5 text-[var(--accent-fg)] transition-colors hover:opacity-90"
                 title="Остановить генерацию"
               >
                 <StopIcon size={20} />
@@ -394,7 +394,7 @@ export default function MessageInput({
                 disabled={!canSend}
                 className={`icon-btn rounded-full p-2.5 transition-colors ${
                   canSend
-                    ? "bg-[var(--accent)] text-[var(--bg-canvas)] hover:opacity-90"
+                    ? "bg-[var(--accent)] text-[var(--accent-fg)] hover:opacity-90"
                     : "bg-[var(--bg-hover)] text-[var(--fg-muted)] cursor-not-allowed"
                 }`}
                 title="Отправить (Enter)"

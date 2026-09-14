@@ -1,19 +1,21 @@
-// Theme handling. The chosen theme is persisted in localStorage and
-// applied by toggling the `light` class on <html>. Default is dark.
+// Theme handling. Persist in localStorage; `dark` class on <html>.
+// Default is light (Claude.ai parchment).
 
 export type Theme = "dark" | "light";
 
-const STORAGE_KEY = "vels-theme";
+const STORAGE_KEY = "ai-panel-theme";
+const LEGACY_KEY = "vels-theme";
 
 export function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  return raw === "light" ? "light" : "dark";
+  if (typeof window === "undefined") return "light";
+  const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_KEY);
+  return raw === "dark" ? "dark" : "light";
 }
 
 export function applyTheme(theme: Theme): void {
   if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle("light", theme === "light");
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.classList.remove("light");
 }
 
 export function setStoredTheme(theme: Theme): void {
@@ -22,6 +24,4 @@ export function setStoredTheme(theme: Theme): void {
   applyTheme(theme);
 }
 
-// Apply the persisted theme on first load so the page doesn't flash dark
-// before React mounts. Safe to import multiple times.
 applyTheme(getStoredTheme());

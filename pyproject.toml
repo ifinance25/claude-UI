@@ -29,10 +29,10 @@ dev = [
     "pytest-playwright>=0.5.0",
 ]
 
-# `vels` CLI: узнать адрес веб-платформы и статус сервиса (issue #1).
+# `ai-panel` CLI: узнать адрес веб-платформы и статус сервиса.
 # Доступна после `pip install -e .`; без установки — `python -m src.cli url`.
 [project.scripts]
-vels = "src.cli:main"
+ai-panel = "src.cli:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -803,7 +803,7 @@ async def process_incoming_text(message: Message, msg_text: str) -> None:
     # If user writes in General chat — auto-create forum topic
     if not topic_id:
         try:
-            topic_name = "Новая сессия Vels Claude"
+            topic_name = "Новая сессия AI-Panel"
 
             # Deterministic color for this chat (cycles through 6 options)
             color = _TOPIC_COLORS[message.chat.id % len(_TOPIC_COLORS)]

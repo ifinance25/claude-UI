@@ -1,4 +1,4 @@
-"""`vels` CLI: вычисление адреса веб-платформы (issue #1)."""
+"""CLI: вычисление адреса веб-платформы."""
 from __future__ import annotations
 
 import unittest
@@ -17,12 +17,12 @@ def _settings(*, enabled=True, public="", host="127.0.0.1", port=8765):
 
 class CliUrlTests(unittest.TestCase):
     def test_public_origin_wins(self):
-        s = _settings(public="https://agent.nickvels.ru/")
+        s = _settings(public="https://ai-panel.example.com/")
         public, local, enabled = _web_base(s)
-        self.assertEqual(public, "https://agent.nickvels.ru")  # trailing slash trimmed
+        self.assertEqual(public, "https://ai-panel.example.com")  # trailing slash trimmed
         self.assertEqual(local, "http://127.0.0.1:8765")
         self.assertTrue(enabled)
-        self.assertEqual(_effective_url(s), "https://agent.nickvels.ru")
+        self.assertEqual(_effective_url(s), "https://ai-panel.example.com")
 
     def test_falls_back_to_local_bind(self):
         s = _settings(public="", host="0.0.0.0", port=9000)

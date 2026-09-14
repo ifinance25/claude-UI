@@ -78,7 +78,7 @@ class ShellInstallerHardeningTests(unittest.TestCase):
             exec_line,
             "ExecStart=/opt/vels-claude/.venv/bin/python /opt/vels-claude/scripts/run_web.py",
         )
-        self.assertIn("Description=Vels Claude (Web)", unit)
+        self.assertIn("Description=AI-Panel (Web)", unit)
 
     def test_systemd_unit_retains_safe_sandbox_hardening(self) -> None:
         unit = _render("render_systemd_unit")
@@ -185,7 +185,7 @@ class RequirementsLockTests(unittest.TestCase):
 class NoEmbeddedSecretTests(unittest.TestCase):
     """Раздаваемые скрипты НЕ должны содержать реальный GitHub-токен.
 
-    Регресс: в platform.nickvels.ru/install.sh утёк зашитый fine-grained PAT —
+    Регресс: в публичном install.sh когда-то утёк зашитый fine-grained PAT —
     любой `curl` публичного файла получал доступ на чтение приватного репо.
     Этот тест навсегда блокирует возврат секрета в репозиторий. Плейсхолдеры
     вида `github_pat_xxx` (<20 символов после префикса) не считаются токеном.

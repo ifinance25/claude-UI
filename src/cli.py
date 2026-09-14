@@ -1,15 +1,8 @@
-"""`vels` — небольшая CLI к Vels Claude.
+"""CLI к AI-Panel: адрес веб-платформы и статус сервиса.
 
-Главное назначение: после закрытия терминала легко узнать ТЕКУЩИЙ адрес веб-
-платформы и статус сервиса, не роясь в конфигах и логах.
-
-    vels url       — публичный адрес веб-платформы (и ссылка для входа)
-    vels status    — адрес, режим веба и статус systemd-сервиса
-    vels open      — то же, что url, но печатает только URL (для скриптов)
-    vels --help    — список команд
-
-Конфиг читается так же, как у приложения (config/config.yaml + config.local.yaml),
-сам бот при этом НЕ запускается.
+    python -m src.cli url       — публичный адрес
+    python -m src.cli status    — адрес, режим веба и статус systemd
+    python -m src.cli open      — только URL (для скриптов)
 """
 from __future__ import annotations
 
@@ -27,7 +20,7 @@ DEFAULT_CONFIG = REPO_ROOT / "config" / "config.yaml"
 
 
 def _load_settings(config_path: str):
-    # Импорт внутри функции — чтобы `vels --help` работал даже при кривом
+    # Импорт внутри функции — чтобы `--help` работал даже при кривом
     # окружении/зависимостях.
     from src.config.settings import get_settings
 
@@ -90,7 +83,7 @@ def _cmd_url(settings, *, quiet: bool) -> int:
 
 def _cmd_status(settings, service: str) -> int:
     public, local, enabled = _web_base(settings)
-    print("Vels Claude — статус")
+    print("AI-Panel — статус")
     print(f"  Веб включён:     {'да' if enabled else 'нет'}")
     print(f"  Адрес:           {public or local}")
     print(f"  Локальный bind:  {local}")
@@ -104,8 +97,8 @@ def _cmd_status(settings, service: str) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="vels",
-        description="CLI к Vels Claude: адрес веб-платформы и статус.",
+        prog="ai-panel",
+        description="CLI к AI-Panel: адрес веб-платформы и статус.",
     )
     parser.add_argument(
         "--config",

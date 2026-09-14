@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-# Публичный бутстрап Vels Claude Light — раздаётся как
-# https://agent.nickvels.ru/releases/light-install.sh
+# Публичный бутстрап AI-Panel — раздаётся как
+# https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh
 #
-# Имена намеренно отдельные от полной версии: releases/light-install.sh и
-# releases/vels-claude-light-latest.tar.gz. Общие /install.sh и
-# releases/vels-claude-latest.tar.gz принадлежат полной версии, и их sha
-# пинится её бутстрапами — подмена оборвала бы установку и обновление всем,
-# кто на полной версии.
+# Имена архивов задаются EXPECTED_SHA256 / RELEASE_URL.
 #
 # Назначение: пользователь ставит Claude Code с веб-интерфейсом себе на сервер
 # ОДНОЙ командой. Telegram-бот опционален (токен можно не вводить).
 #
-#   curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # БЕЗ СЕКРЕТОВ. В этом файле НЕТ и НЕ ДОЛЖНО БЫТЬ GitHub-токена.
@@ -33,7 +29,7 @@ set -euo pipefail
 
 # Публичный URL релиз-архива (раздаётся nginx с того же хоста). Можно
 # переопределить через окружение для тестовых стендов.
-RELEASE_URL="${RELEASE_URL:-https://agent.nickvels.ru/releases/vels-claude-light-latest.tar.gz}"
+RELEASE_URL="${RELEASE_URL:-https://github.com/ifinance25/claude-UI/archive/refs/heads/main.tar.gz}"
 
 # SHA-256 ожидаемого архива. Мейнтейнер вписывает вывод make-release.sh. Если
 # оставить плейсхолдер — установка прервётся (fail-closed: не запускаем непроверенное).
@@ -43,7 +39,7 @@ err() { echo "[ERROR] $*" >&2; }
 
 if [[ $EUID -ne 0 ]]; then
     err "Требуются root-права. Запустите через sudo:"
-    err "  curl -sSL https://agent.nickvels.ru/releases/light-install.sh | sudo bash"
+    err "  curl -sSL https://raw.githubusercontent.com/ifinance25/claude-UI/main/scripts/install.sh | sudo bash"
     exit 1
 fi
 
@@ -62,7 +58,7 @@ fi
 
 if [[ ! "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
     err "Bootstrap не настроен: EXPECTED_SHA256 должен быть sha256 релиз-архива."
-    err "Сообщите администратору agent.nickvels.ru (см. инструкцию в шапке скрипта)."
+    err "Задайте EXPECTED_SHA256 (sha256 релиз-архива) или ставьте через scripts/install.sh."
     exit 1
 fi
 

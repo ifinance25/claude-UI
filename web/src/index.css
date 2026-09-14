@@ -16,61 +16,57 @@
   .icon-btn:not(:disabled):active svg { transform: scale(0.94); }
 }
 
-/* Gilroy доступен только в SemiBold — объявляем его ровно как 600,
- * иначе обычный (400) и жирный (700) текст рисуются тем же полужирным
- * глифом и весь интерфейс выглядит «жирным». */
-@font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-SemiBold.ttf") format("truetype");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
 html, body, #root {
   height: 100%;
 }
 
 /*
- * Open-WebUI-inspired dark palette. Sidebar lives one shade darker than
- * the main canvas so the active boundary is felt without a visible
- * border. The "light" class on <html> swaps to the light palette.
+ * Палитра Claude.ai (токены Anthropic MCP Apps / claude.com design guidelines).
+ * Светлая тема по умолчанию: пергамент #F5F4ED, слоновая кость, тёплый уголь,
+ * терракота #c96442. Класс `dark` на <html> включает тёмную пару тех же токенов.
  */
 :root {
-  --bg-canvas: #1a1a1a;
-  --bg-sidebar: #0e0e0e;
-  --bg-hover: #262626;
-  --bg-elevated: #1f1f1f;
-  --bg-input: #2a2a2a;
-  --fg-primary: #ececec;
-  --fg-secondary: #b4b4b4;
-  --fg-muted: #7a7a7a;
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --accent: #ffffff;
+  --bg-canvas: #f5f4ed;
+  --bg-sidebar: #faf9f5;
+  --bg-hover: #e8e6dc;
+  --bg-elevated: #ffffff;
+  --bg-input: #faf9f5;
+  --fg-primary: #141413;
+  --fg-secondary: #3d3d3a;
+  --fg-muted: #73726c;
+  --border-subtle: rgba(31, 30, 29, 0.15);
+  --accent: #141413;
+  --accent-fg: #faf9f5;
+  --accent-brand: #c96442;
+  --shadow-composer: 0 4px 6px -1px rgba(20, 20, 19, 0.08), 0 2px 4px -2px rgba(20, 20, 19, 0.06);
   font-size: 16px;
+  color-scheme: light;
 }
-html.light {
-  --bg-canvas: #ffffff;
-  --bg-sidebar: #f6f6f6;
-  --bg-hover: #ececec;
-  --bg-elevated: #fafafa;
-  --bg-input: #f0f0f0;
-  --fg-primary: #171717;
-  --fg-secondary: #4a4a4a;
-  --fg-muted: #8a8a8a;
-  --border-subtle: rgba(0, 0, 0, 0.07);
-  --accent: #171717;
+html.dark {
+  --bg-canvas: #262624;
+  --bg-sidebar: #141413;
+  --bg-hover: #30302e;
+  --bg-elevated: #30302e;
+  --bg-input: #30302e;
+  --fg-primary: #faf9f5;
+  --fg-secondary: #c2c0b6;
+  --fg-muted: #9c9a92;
+  --border-subtle: rgba(222, 220, 209, 0.15);
+  --accent: #faf9f5;
+  --accent-fg: #141413;
+  --accent-brand: #d97757;
+  --shadow-composer: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
 }
 
 body {
   background-color: var(--bg-canvas);
   color: var(--fg-primary);
   @apply antialiased;
-  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
   font-size: 16px;
-  line-height: 1.55;
-  letter-spacing: 0.01em;
-  /* «feel better»: абзацы не оставляют «сирот» (одно слово на последней строке). */
+  line-height: 1.4;
+  letter-spacing: 0;
   text-wrap: pretty;
 }
 
@@ -94,13 +90,13 @@ input, textarea, button, select {
 /* Compact scrollbar so sidebar/chat scroll feels native. */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(31, 30, 29, 0.18);
   border-radius: 5px;
 }
-*::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); }
+*::-webkit-scrollbar-thumb:hover { background: rgba(31, 30, 29, 0.28); }
 *::-webkit-scrollbar-track { background: transparent; }
-html.light *::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); }
-html.light *::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.24); }
+html.dark *::-webkit-scrollbar-thumb { background: rgba(222, 220, 209, 0.16); }
+html.dark *::-webkit-scrollbar-thumb:hover { background: rgba(222, 220, 209, 0.28); }
 
 /* Markdown-вывод (ответы Claude + документация). Базовый вес нормальный;
  * жирным — только реальный <strong>. */
@@ -109,7 +105,7 @@ html.light *::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.24); }
 .markdown-body li { text-wrap: pretty; }
 .markdown-body strong { font-weight: 700; }
 .markdown-body h1, .markdown-body h2, .markdown-body h3 {
-  font-family: "Gilroy", ui-sans-serif, sans-serif;
+  font-family: "Source Serif 4", ui-serif, Georgia, serif;
   font-weight: 600;
   margin: 1em 0 0.4em;
   line-height: 1.3;
@@ -123,7 +119,7 @@ html.light *::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.24); }
 .markdown-body ul { list-style: disc; }
 .markdown-body ol { list-style: decimal; }
 .markdown-body li { margin: 0.2em 0; }
-.markdown-body a { color: #6ea8fe; text-decoration: underline; }
+.markdown-body a { color: var(--accent-brand); text-decoration: underline; }
 .markdown-body code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9em;
@@ -157,32 +153,31 @@ html.light *::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.24); }
   border: 1px solid var(--border-subtle);
   padding: 0.4em 0.7em;
 }
-/* Подсветка highlight.js (.hljs-*) — палитра в духе VS Code Dark+ (по умолчанию)
- * и Light+ (в светлой теме). Полный набор токенов, чтобы код выглядел как в IDE. */
-.hljs-comment, .hljs-quote { color: #6a9955; font-style: italic; }
-.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-name { color: #569cd6; }
-.hljs-meta .hljs-keyword, .hljs-selector-pseudo { color: #c586c0; }
-.hljs-string, .hljs-attr, .hljs-meta .hljs-string, .hljs-addition { color: #ce9178; }
-.hljs-number, .hljs-symbol, .hljs-bullet { color: #b5cea8; }
-.hljs-title, .hljs-title.function_, .hljs-function .hljs-title { color: #dcdcaa; }
-.hljs-type, .hljs-class .hljs-title, .hljs-title.class_, .hljs-built_in { color: #4ec9b0; }
-.hljs-variable, .hljs-template-variable, .hljs-attribute, .hljs-property, .hljs-params { color: #9cdcfe; }
-.hljs-regexp, .hljs-deletion { color: #d16969; }
-.hljs-meta, .hljs-tag { color: #569cd6; }
+/* Подсветка highlight.js: тёплая светлая тема Claude; тёмная — VS Code Dark+. */
+html.dark .hljs-comment, html.dark .hljs-quote { color: #6a9955; font-style: italic; }
+html.dark .hljs-keyword, html.dark .hljs-selector-tag, html.dark .hljs-literal, html.dark .hljs-section, html.dark .hljs-name { color: #569cd6; }
+html.dark .hljs-meta .hljs-keyword, html.dark .hljs-selector-pseudo { color: #c586c0; }
+html.dark .hljs-string, html.dark .hljs-attr, html.dark .hljs-meta .hljs-string, html.dark .hljs-addition { color: #ce9178; }
+html.dark .hljs-number, html.dark .hljs-symbol, html.dark .hljs-bullet { color: #b5cea8; }
+html.dark .hljs-title, html.dark .hljs-title.function_, html.dark .hljs-function .hljs-title { color: #dcdcaa; }
+html.dark .hljs-type, html.dark .hljs-class .hljs-title, html.dark .hljs-title.class_, html.dark .hljs-built_in { color: #4ec9b0; }
+html.dark .hljs-variable, html.dark .hljs-template-variable, html.dark .hljs-attribute, html.dark .hljs-property, html.dark .hljs-params { color: #9cdcfe; }
+html.dark .hljs-regexp, html.dark .hljs-deletion { color: #d16969; }
+html.dark .hljs-meta, html.dark .hljs-tag { color: #569cd6; }
 .hljs-emphasis { font-style: italic; }
 .hljs-strong { font-weight: 600; }
 
-html.light .hljs-comment, html.light .hljs-quote { color: #008000; }
-html.light .hljs-keyword, html.light .hljs-selector-tag, html.light .hljs-literal,
-html.light .hljs-section, html.light .hljs-name, html.light .hljs-meta, html.light .hljs-tag { color: #0000ff; }
-html.light .hljs-meta .hljs-keyword, html.light .hljs-selector-pseudo { color: #af00db; }
-html.light .hljs-string, html.light .hljs-attr, html.light .hljs-meta .hljs-string, html.light .hljs-addition { color: #a31515; }
-html.light .hljs-number, html.light .hljs-symbol, html.light .hljs-bullet { color: #098658; }
-html.light .hljs-title, html.light .hljs-title.function_, html.light .hljs-function .hljs-title { color: #795e26; }
-html.light .hljs-type, html.light .hljs-class .hljs-title, html.light .hljs-title.class_, html.light .hljs-built_in { color: #267f99; }
-html.light .hljs-variable, html.light .hljs-template-variable, html.light .hljs-attribute,
-html.light .hljs-property, html.light .hljs-params { color: #001080; }
-html.light .hljs-regexp, html.light .hljs-deletion { color: #811f3f; }
+html:not(.dark) .hljs-comment, html:not(.dark) .hljs-quote { color: #6b6b5e; font-style: italic; }
+html:not(.dark) .hljs-keyword, html:not(.dark) .hljs-selector-tag, html:not(.dark) .hljs-literal,
+html:not(.dark) .hljs-section, html:not(.dark) .hljs-name, html:not(.dark) .hljs-meta, html:not(.dark) .hljs-tag { color: #5a4815; }
+html:not(.dark) .hljs-meta .hljs-keyword, html:not(.dark) .hljs-selector-pseudo { color: #7f2c28; }
+html:not(.dark) .hljs-string, html:not(.dark) .hljs-attr, html:not(.dark) .hljs-meta .hljs-string, html:not(.dark) .hljs-addition { color: #c96442; }
+html:not(.dark) .hljs-number, html:not(.dark) .hljs-symbol, html:not(.dark) .hljs-bullet { color: #265b19; }
+html:not(.dark) .hljs-title, html:not(.dark) .hljs-title.function_, html:not(.dark) .hljs-function .hljs-title { color: #3266ad; }
+html:not(.dark) .hljs-type, html:not(.dark) .hljs-class .hljs-title, html:not(.dark) .hljs-title.class_, html:not(.dark) .hljs-built_in { color: #3d3d3a; }
+html:not(.dark) .hljs-variable, html:not(.dark) .hljs-template-variable, html:not(.dark) .hljs-attribute,
+html:not(.dark) .hljs-property, html:not(.dark) .hljs-params { color: #141413; }
+html:not(.dark) .hljs-regexp, html:not(.dark) .hljs-deletion { color: #7f2c28; }
 
 /* Просмотр файла (FileViewer). Скоупим к .file-view, чтобы НЕ задеть
  * блоки кода в ответах Claude (там нужен горизонтальный скролл).

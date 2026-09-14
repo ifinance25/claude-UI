@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Обёртка для CLI `vels` в развёрнутой установке (systemd, /opt/vels-claude).
-# Узнать адрес веб-платформы: ./scripts/vels url   (или `vels url` после
-# `pip install -e .`). Запускает CLI в venv проекта, не стартуя бота.
+# Обёртка CLI в развёрнутой установке.
+# Узнать адрес: ./scripts/vels url   (или `ai-panel url` после pip install -e .)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Обязательно из корня репозитория: `python -m src.cli` импортирует пакет `src`

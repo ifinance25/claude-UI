@@ -22,13 +22,13 @@ def _build(bridge: ClaudeBridge) -> dict:
 
 class WebOriginSystemPromptTests(unittest.TestCase):
     def test_appends_public_origin(self):
-        bridge = ClaudeBridge(web_public_origin="https://agent.nickvels.ru")
+        bridge = ClaudeBridge(web_public_origin="https://ai-panel.example.com")
         kwargs = _build(bridge)
         sp = kwargs.get("system_prompt")
         self.assertIsInstance(sp, dict)
         self.assertEqual(sp["type"], "preset")
         self.assertEqual(sp["preset"], "claude_code")
-        self.assertIn("agent.nickvels.ru", sp["append"])
+        self.assertIn("ai-panel.example.com", sp["append"])
         # Русская инструкция всегда присутствует рядом с адресом.
         self.assertIn("РУССКОМ", sp["append"])
 
@@ -41,7 +41,7 @@ class WebOriginSystemPromptTests(unittest.TestCase):
         self.assertIsInstance(sp, dict)
         self.assertEqual(sp["preset"], "claude_code")
         self.assertIn("РУССКОМ", sp["append"])
-        self.assertNotIn("agent.nickvels.ru", sp["append"])
+        self.assertNotIn("ai-panel.example.com", sp["append"])
 
     def test_blank_origin_still_russian_only(self):
         bridge = ClaudeBridge(web_public_origin="   ")
