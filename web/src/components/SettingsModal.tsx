@@ -35,7 +35,7 @@ type Tab =
 const VERBOSE_LEVELS: { level: 0 | 1 | 2 | 3; label: string; hint: string }[] = [
   { level: 0, label: "Тихий", hint: "Только финальный ответ Claude" },
   { level: 1, label: "Нормальный", hint: "Ответ + вызовы инструментов" },
-  { level: 2, label: "Подробный", hint: "+ размышления и логи субагентов" },
+  { level: 2, label: "Подробный", hint: "+ логи субагентов" },
   { level: 3, label: "Детальный", hint: "Всё, включая внутренние события" },
 ];
 
@@ -287,10 +287,8 @@ export default function SettingsModal({ open, onClose }: Props) {
             {tab === "verbose" && (
               <div className="space-y-2.5">
                 <p className="text-sm text-[var(--fg-muted)]">
-                  Сколько деталей выводить во время работы Claude. В браузере
-                  лента вызовов инструментов видна всегда, а от уровня зависит
-                  показ размышлений — со второго. В Telegram уровень управляет
-                  всем выводом; там же он меняется командой <code>/verbose</code>.
+                  Сколько деталей выводить во время работы Claude — текст,
+                  вызовы инструментов, логи субагентов.
                 </p>
                 {verbose === null ? (
                   <div className="text-sm text-[var(--fg-muted)]">Загрузка…</div>

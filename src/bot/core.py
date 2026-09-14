@@ -174,9 +174,7 @@ class TelegramClaudeBot:
             bot_token=settings.get_bot_token(),
             jwt_secret=settings.get_web_jwt_secret(),
             dev_bearer_token=settings.get_web_dev_bearer_token(),
-            # Тот же список, что у web-only входа: ограничение light не
-            # должно зависеть от того, подключён Telegram или нет.
-            project_paths=settings.get_light_project_paths(),
+            project_paths=settings.get_project_paths(),
             admin_login=settings.get_admin_login(),
             admin_password=settings.get_admin_password(),
             scratch_dir=settings.get_scratch_dir(),
@@ -211,7 +209,7 @@ class TelegramClaudeBot:
         # даже без настроенных проектов prompt-фильтр (validate_user_message)
         # должен работать. С пустым allowed_roots containment-проверки —
         # no-op, но фильтр опасных инструкций активен.
-        project_paths = self.settings.get_light_project_paths()
+        project_paths = self.settings.get_project_paths()
         security = SecurityMiddleware(
             allowed_roots=project_paths or [],
             audit_log_path=self.settings.get_session_database_path().parent / "security.log",

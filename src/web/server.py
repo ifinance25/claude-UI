@@ -13,17 +13,20 @@ from typing import Any
 
 import structlog
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.config.settings import WebSettings
 from src.web.magic_link import MagicLinkStore
 from src.web.origin_check import build_allowed_origins, is_allowed_origin
+from src.web.routes_admin import make_admin_router
 from src.web.routes_apikey import make_apikey_router
 from src.web.routes_auth import make_auth_router
 from src.web.routes_connections import make_connections_router
 from src.web.routes_docs import make_docs_router
+from src.web.routes_files import make_files_router
+from src.web.routes_members import make_members_router
 from src.web.routes_model import make_model_router
 from src.web.routes_projects import make_projects_router
 from src.web.routes_sessions import make_sessions_router
@@ -54,12 +57,6 @@ def mount_frontend(app: FastAPI, dist_dir) -> None:
 
     @app.get("/{full_path:path}")
     async def spa(full_path: str) -> FileResponse:
-        # /api/* мимо роутеров — это отсутствующий эндпоинт, а не адрес
-        # клиентского роутера. Без этого гейта опечатка в пути возвращала
-        # фронту 200 + index.html: resp.ok истинно, а resp.json() падал на
-        # «Unexpected token <», и ошибка выглядела как поломка парсинга.
-        if full_path == "api" or full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="Not Found")
         # full_path недоверенный. Конвертер :path НЕ схлопывает
         # URL-кодированные `..` (%2e%2e%2f), поэтому без проверки границ
         # FileResponse отдал бы любой файл с диска (unauth traversal,
@@ -146,11 +143,8 @@ class WebServer:
                     await self._ws_forwarder.stop()
 
         self.app = FastAPI(
-            title="Vels Claude Light",
-            # Схема API отдавалась без авторизации и перечисляла все
-            # эндпоинты. Фронт её не читает, Swagger и ReDoc уже
-            # выключены — выключаем и схему.
-            openapi_url=None,
+            title="Vels-Claude Web UI",
+            openapi_url="/api/openapi.json",
             docs_url=None,
             redoc_url=None,
             lifespan=lifespan,
@@ -314,6 +308,14 @@ class WebServer:
                 allowed_user_ids=self.allowed_user_ids,
             )
         )
+        self.app.include_router(
+            make_files_router(
+                jwt_secret=self.jwt_secret,
+                project_paths_provider=self._effective_project_paths,
+                session_manager=self.session_manager,
+                allowed_user_ids=self.allowed_user_ids,
+            )
+        )
         # Подключения к сервисам (MCP) — регистрируем всегда: сам роутер
         # отвечает enabled:false / 503, когда connections_store is None
         # (фича выключена), так что не зависит от session_manager.
@@ -366,6 +368,27 @@ class WebServer:
                     session_manager=self.session_manager,
                     allowed_project_roots_provider=self._effective_project_paths,
                     allowed_user_ids=self.allowed_user_ids,
+                )
+            )
+            self.app.include_router(
+                make_admin_router(
+                    jwt_secret=self.jwt_secret,
+                    session_manager=self.session_manager,
+                    allowed_user_ids=self.allowed_user_ids,
+                    api_key_store=self.api_key_store,
+                    projects_dir=self.settings.get_projects_directory(),
+                )
+            )
+            # Self-service шеринг проекта: участники управляются владельцем
+            # full-доступа (не только админом). Тот же источник корней проектов
+            # (_effective_project_paths), что и у sessions/ws-роутеров, чтобы
+            # авторизация по project_id совпадала во всём стеке.
+            self.app.include_router(
+                make_members_router(
+                    jwt_secret=self.jwt_secret,
+                    session_manager=self.session_manager,
+                    allowed_user_ids=self.allowed_user_ids,
+                    get_project_paths=self._effective_project_paths,
                 )
             )
 

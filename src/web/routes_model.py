@@ -18,11 +18,10 @@ from src.claude.claude_settings import (
     write_claude_settings,
 )
 from src.claude.commands import cli_command_label, fetch_cli_commands_for_project
-from src.claude.model_catalog import catalog_model_ids, get_models
 from src.claude.models import (
     ALIAS_TO_ID,
     DEFAULT_MODEL,
-    is_safe_model_id,
+    KNOWN_MODELS,
 )
 from src.claude.skills import discover_marketplace_skills, discover_project_skills
 from src.web.dependencies import get_current_user_factory, require_admin_factory
@@ -125,15 +124,12 @@ def make_model_router(
     async def get_model(_: dict = Depends(get_current_user)) -> ModelOut:
         data = await asyncio.to_thread(read_claude_settings, CLAUDE_SETTINGS_PATH)
         raw_model = str(data.get("model") or DEFAULT_MODEL)
-        # Каталог ходит в сеть (с кэшем на часы) — уводим в тред, чтобы не
-        # блокировать событийный цикл; при недоступности отдаёт статику.
-        known = await asyncio.to_thread(get_models)
         return ModelOut(
             current=ALIAS_TO_ID.get(raw_model, raw_model),
             permission_mode=str(
                 data.get("permissions", {}).get("defaultMode", "default")
             ),
-            known=known,
+            known=KNOWN_MODELS,
         )
 
     @router.patch("/model", response_model=ModelOut)
@@ -145,13 +141,12 @@ def make_model_router(
         # читает каждый спавн Claude (всех веб-юзеров и бота). Раньше менять её
         # мог любой залогиненный, включая readonly-аккаунт.
         new_model = payload.model.strip()
-        # Allowlist — значение пишется дословно в общий ~/.claude/settings.json,
-        # который читает каждый спавн Claude (и бот), поэтому произвольная или
-        # разбухшая строка туда попасть не должна (CR3-3). Список теперь живой
-        # (модели выходят часто), но формат id всё равно проверяем строго: без
-        # этого недоступный/подменённый справочник расширил бы allowlist.
-        valid_ids = await asyncio.to_thread(catalog_model_ids)
-        if not is_safe_model_id(new_model) or new_model not in valid_ids:
+        # Allowlist against KNOWN_MODELS — this value is written verbatim
+        # into the global ~/.claude/settings.json consumed by every Claude
+        # spawn (and the Telegram bot), so an arbitrary/oversized string
+        # must never land there (CR3-3).
+        valid_ids = {m["id"] for m in KNOWN_MODELS}
+        if new_model not in valid_ids:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"unknown model; expected one of {sorted(valid_ids)}",
@@ -188,7 +183,7 @@ def make_model_router(
             permission_mode=str(
                 data.get("permissions", {}).get("defaultMode", "default")
             ),
-            known=await asyncio.to_thread(get_models),
+            known=KNOWN_MODELS,
         )
 
     @router.get("/slash-commands")

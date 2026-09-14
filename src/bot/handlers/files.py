@@ -16,7 +16,7 @@ import structlog
 
 from src.apikeys.policy import NeedsApiKeyError, resolve_session_auth
 from src.bot import onboarding
-from src.bot.single_project import bind_topic_to_single_project
+from src.bot.keyboards import create_project_keyboard
 from src.bot.permissions import is_bot_privileged
 from src.claude import ClaudeBridge, ClaudeEventType, ClaudeImageAttachment, SessionManager
 from src.config import Settings
@@ -69,34 +69,25 @@ async def _get_upload_context(message: Message):
         return None
 
     if not topic_id:
-        await message.answer("Загружайте файлы внутри топика Vels Claude Light после выбора проекта.")
+        await message.answer("Загружайте файлы внутри топика Vels Claude после выбора проекта.")
         return None
 
     session = await session_manager.async_get_session(topic_id)
 
     if not session:
-        projects = settings.get_light_project_paths()
+        projects = settings.get_project_paths()
         if not projects:
             await message.answer(
                 onboarding.no_projects_message(settings.get_projects_directory()),
                 parse_mode="HTML",
             )
             return None
-        bound = await bind_topic_to_single_project(
-            settings=settings,
-            session_manager=session_manager,
-            topic_id=topic_id,
-            chat_id=message.chat.id,
+        await message.answer(
+            onboarding.new_session_prompt_message(auto_created=False),
+            reply_markup=create_project_keyboard(projects),
+            parse_mode="HTML",
         )
-        if bound is None:
-            await message.answer(
-                onboarding.no_projects_message(settings.get_projects_directory()),
-                parse_mode="HTML",
-            )
-            return None
-        session = await session_manager.async_get_session(topic_id)
-        if session is None:
-            return None
+        return None
 
     project_path = Path(session.project_path).expanduser()
     if not project_path.exists():

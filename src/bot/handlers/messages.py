@@ -14,11 +14,11 @@ import structlog
 
 from src.apikeys.policy import NeedsApiKeyError, resolve_session_auth
 from src.bot import onboarding
-from src.bot.single_project import bind_topic_to_single_project
 from src.bot.keyboards import (
     create_mcp_candidate_keyboard,
     create_mcp_catalog_keyboard,
     create_model_keyboard,
+    create_project_keyboard,
 )
 from src.bot.permissions import is_bot_admin, is_bot_privileged
 from src.claude import ClaudeBridge, ClaudeEventType, SessionManager, SessionStatus
@@ -803,7 +803,7 @@ async def process_incoming_text(message: Message, msg_text: str) -> None:
     # If user writes in General chat — auto-create forum topic
     if not topic_id:
         try:
-            topic_name = "Новая сессия Vels Claude Light"
+            topic_name = "Новая сессия Vels Claude"
 
             # Deterministic color for this chat (cycles through 6 options)
             color = _TOPIC_COLORS[message.chat.id % len(_TOPIC_COLORS)]
@@ -828,19 +828,15 @@ async def process_incoming_text(message: Message, msg_text: str) -> None:
                 topic_name=topic_name,
             )
 
-            # Light: проект один, выбирать не из чего — привязываем сразу.
-            # В вебе чат так же создаётся в единственном проекте, без вопроса.
-            bound = await bind_topic_to_single_project(
-                settings=settings,
-                session_manager=session_manager,
-                topic_id=topic_id,
-                chat_id=message.chat.id,
-            )
-            if bound is not None:
+            # Show project selection in the new topic
+            projects = settings.get_project_paths()
+            if projects:
+                logger.info("showing_project_selection", topic_id=topic_id, projects_count=len(projects))
                 await bot.send_message(
                     chat_id=message.chat.id,
                     message_thread_id=topic_id,
                     text=onboarding.new_session_prompt_message(auto_created=True),
+                    reply_markup=create_project_keyboard(projects),
                     parse_mode="HTML",
                 )
             else:
@@ -873,7 +869,7 @@ async def process_incoming_text(message: Message, msg_text: str) -> None:
     session = await session_manager.async_get_session(topic_id)
 
     if not session:
-        projects = settings.get_light_project_paths()
+        projects = settings.get_project_paths()
         logger.info(
             "no_session — prompting project selection",
             topic_id=topic_id,
@@ -887,23 +883,12 @@ async def process_incoming_text(message: Message, msg_text: str) -> None:
             )
             return
 
-        # Проект один — привязываем и продолжаем обработку этого же сообщения,
-        # чтобы человек не отправлял его повторно после нажатия кнопки.
-        bound = await bind_topic_to_single_project(
-            settings=settings,
-            session_manager=session_manager,
-            topic_id=topic_id,
-            chat_id=message.chat.id,
+        await message.answer(
+            onboarding.new_session_prompt_message(auto_created=False),
+            reply_markup=create_project_keyboard(projects),
+            parse_mode="HTML",
         )
-        if bound is None:
-            await message.answer(
-                onboarding.no_projects_message(settings.get_projects_directory()),
-                parse_mode="HTML",
-            )
-            return
-        session = await session_manager.async_get_session(topic_id)
-        if session is None:
-            return
+        return
 
     cmd_word = msg_text.strip().split()[0].lower() if msg_text.strip() else ""
     if cmd_word in _TUI_COMMANDS:

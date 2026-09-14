@@ -7,6 +7,7 @@ import {
   ImageIcon,
   PlusIcon,
   SendIcon,
+  SkillsIcon,
   SlashIcon,
   StopIcon,
 } from "@/components/icons";
@@ -60,8 +61,8 @@ export default function MessageInput({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  // Меню команд, открытое кнопкой (а не вводом "/").
-  const [menu, setMenu] = useState<null | "cmd">(null);
+  // Меню команд/скиллов, открытое кнопкой (а не вводом "/").
+  const [menu, setMenu] = useState<null | "cmd" | "skill">(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Актуальный sessionUuid — чтобы in-flight upload-цикл мог заметить
@@ -174,20 +175,19 @@ export default function MessageInput({
   return (
     <div className="px-6 pb-8 pt-3">
       <div className="relative mx-auto w-full max-w-3xl">
-        {/* Поповер команд, открытый кнопкой. Прячем, когда юзер набирает
-            "/" — тогда показывается типизированный поповер ниже, и два меню
-            не накладываются. AnimatePresence даёт анимацию и на закрытие
-            (exit), а не только на открытие.
-
-            Отдельной кнопки «Скиллы» здесь больше нет: она открывала тот же
-            список, отфильтрованный по kind === "skill", то есть дублировала
-            это меню — а на установке без скиллов всегда была пустой. Скиллы
-            никуда не делись: они в этом же списке и в поповере по вводу "/". */}
+        {/* Поповер команд/скиллов, открытый кнопкой. Прячем, когда юзер
+            набирает "/" — тогда показывается типизированный поповер ниже,
+            и два меню не накладываются. AnimatePresence даёт анимацию и
+            на закрытие (exit), а не только на открытие. */}
         <AnimatePresence>
           {menu && !showSlash && (
             <CommandsPopover
-              title="Команды"
-              items={slashes}
+              title={menu === "skill" ? "Скиллы" : "Команды"}
+              items={
+                menu === "skill"
+                  ? slashes.filter((s) => s.kind === "skill")
+                  : slashes
+              }
               onClose={() => setMenu(null)}
               onPick={(cmd) => {
                 setMenu(null);
@@ -368,6 +368,14 @@ export default function MessageInput({
                 title="Команды"
               >
                 <SlashIcon size={20} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setMenu((m) => (m === "skill" ? null : "skill"))}
+                className="icon-btn rounded-full p-2 text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                title="Скиллы"
+              >
+                <SkillsIcon size={20} />
               </button>
             </div>
             {isGenerating ? (

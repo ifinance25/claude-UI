@@ -1,4 +1,4 @@
-"""Client-facing onboarding copy for Vels Claude Light Telegram flows."""
+"""Client-facing onboarding copy for Vels Claude Telegram flows."""
 from __future__ import annotations
 
 from html import escape
@@ -10,14 +10,15 @@ SERVICE_NAME = "vels-claude"
 
 def start_message() -> str:
     return (
-        "<b>Vels Claude Light</b>\n\n"
-        "Vels Claude Light дает доступ к Claude Code прямо из Telegram.\n\n"
+        "<b>Vels Claude</b>\n\n"
+        "Vels Claude дает доступ к Claude Code прямо из Telegram.\n\n"
         "<b>Как начать:</b>\n"
         "1. Каждый топик - отдельная рабочая сессия.\n"
         "2. Напишите задачу в General chat, и бот создаст топик автоматически.\n"
         "3. Можно также создать топик вручную.\n"
-        "4. Отправляйте текст, файлы, скриншоты или команды Claude.\n\n"
+        "4. Выберите проект, затем отправляйте текст, файлы, скриншоты или команды Claude.\n\n"
         "<b>Команды:</b>\n"
+        "/projects - выбрать проект\n"
         "/status - статус текущей сессии\n"
         "/connect - подключить свои сервисы (Notion, GitHub)\n"
         "/settings - настройки\n"
@@ -30,7 +31,7 @@ def start_message() -> str:
 def auth_message(*, service_name: str = SERVICE_NAME) -> str:
     return (
         "<b>Claude Code authorization</b>\n\n"
-        "The production installer checks Claude Code authorization before starting Vels Claude Light.\n\n"
+        "The production installer checks Claude Code authorization before starting Vels Claude.\n\n"
         "If authorization breaks later, run Claude Code as the same Linux user that runs the service:\n"
         "<code>claude</code>\n"
         "<code>claude -p \"ping\" --output-format stream-json --verbose</code>\n\n"
@@ -41,18 +42,16 @@ def auth_message(*, service_name: str = SERVICE_NAME) -> str:
 
 
 def new_session_prompt_message(*, auto_created: bool = False) -> str:
-    # Light работает с одним проектом, и он привязывается автоматически —
-    # ни выбора, ни «следующего шага» у человека нет.
-    title = "Новая сессия Vels Claude Light" if auto_created else "Новая сессия"
+    title = "Новая сессия Vels Claude" if auto_created else "Новая сессия"
     lead = (
-        "Топик создан автоматически, проект подключён."
+        "Топик создан автоматически. Следующий шаг - выбрать проект."
         if auto_created
-        else "Проект подключён."
+        else "Выберите проект для работы."
     )
     return (
         f"<b>{title}</b>\n\n"
         f"{lead}\n\n"
-        "Отправьте первую задачу, файл, скриншот или команду Claude."
+        "После выбора проекта отправьте первую задачу, файл, скриншот или команду Claude."
     )
 
 
@@ -60,7 +59,8 @@ def no_projects_message(projects_dir: Path | str) -> str:
     projects_path = escape(str(projects_dir))
     return (
         "<b>Проекты не найдены</b>\n\n"
-        f"Vels Claude Light сейчас ищет проекты здесь:\n<code>{projects_path}</code>\n\n"
+        f"Vels Claude сейчас ищет проекты здесь:\n<code>{projects_path}</code>\n\n"
+        "Создайте или склонируйте папки проектов внутрь этой директории, затем запустите /projects еще раз."
     )
 
 
@@ -84,7 +84,7 @@ def auto_topic_failure_message() -> str:
 
 def no_session_in_topic_message() -> str:
     return (
-        "В этом топике пока нет сессии Vels Claude Light.\n"
+        "В этом топике пока нет сессии Vels Claude.\n"
         "Выберите проект, чтобы привязать топик к рабочей папке."
     )
 
@@ -93,6 +93,7 @@ def project_missing_message(project_path: str) -> str:
     return (
         "<b>Папка проекта больше не найдена</b>\n\n"
         f"Ожидался путь:\n<code>{escape(project_path)}</code>\n\n"
+        "Проверьте, что проект существует на сервере, или выберите другой проект через /projects."
     )
 
 

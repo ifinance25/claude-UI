@@ -51,10 +51,10 @@ export default function InputModelButton({ onChange }: Props) {
     }
   };
 
-  const current = info?.current ?? "claude-sonnet-5";
+  const current = info?.current ?? "claude-sonnet-4-6";
   const knownItem = info?.known.find((m) => m.id === current);
-  // Короткая подпись для тесного места в инпуте: "Sonnet 5" вместо
-  // полного "Claude Sonnet 5".
+  // Короткая подпись для тесного места в инпуте: "Sonnet 4.6" вместо
+  // полного "Claude Sonnet 4.6".
   const shortLabel = (knownItem?.label ?? current).replace(/^Claude\s+/, "");
 
   return (

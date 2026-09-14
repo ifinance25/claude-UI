@@ -2238,22 +2238,11 @@ class ClaudeBridge:
             state.saw_stream_delta = True
             prefix = _close_thinking()
             text_content = str(_value(delta, "text", "") or "")
-            if state.had_tool_use and text_content:
-                # Условие НЕ включает had_text_output: раньше включало, и когда
-                # до инструмента был только thinking (видимого текста ещё нет),
-                # первая пост-тул дельта проскакивала мимо буфера и уходила как
-                # есть, выставляя had_text_output. Разделитель тогда добавлялся
-                # ко ВТОРОЙ дельте — то есть в середину слова: «М», а следом
-                # «\n\nы в demo-project». Теперь буфер ловит именно первую.
+            if state.had_tool_use and state.had_text_output and text_content:
                 if not state.post_tool_buffer:
                     state.post_tool_buffer = text_content
                     return prefix + [ClaudeEvent(type=ClaudeEventType.TEXT, content="")]
-                # Разделитель нужен, только если до инструмента БЫЛ видимый
-                # текст. had_text_output здесь всё ещё хранит состояние «до
-                # инструмента»: первая пост-тул дельта ушла в буфер, не трогая
-                # флаг (ветка выше возвращается раньше).
-                sep = "\n\n" if state.had_text_output else ""
-                text_content = sep + state.post_tool_buffer + text_content
+                text_content = "\n\n" + state.post_tool_buffer + text_content
                 state.post_tool_buffer = ""
                 state.had_tool_use = False
             if text_content:

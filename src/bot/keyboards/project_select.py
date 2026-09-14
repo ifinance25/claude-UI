@@ -11,6 +11,71 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 PROJECTS_PER_PAGE = 8
 
 
+def create_project_keyboard(
+    projects: list[Path],
+    page: int = 0,
+) -> InlineKeyboardMarkup:
+    """Create keyboard with project selection buttons and pagination.
+
+    Args:
+        projects: Full list of project paths.
+        page: Current page number (0-indexed).
+    """
+    total = len(projects)
+    total_pages = max(1, (total + PROJECTS_PER_PAGE - 1) // PROJECTS_PER_PAGE)
+    page = max(0, min(page, total_pages - 1))
+
+    start = page * PROJECTS_PER_PAGE
+    end = min(start + PROJECTS_PER_PAGE, total)
+    page_projects = projects[start:end]
+
+    builder = InlineKeyboardBuilder()
+
+    for project in page_projects:
+        builder.button(
+            text=project.name,
+            # Telegram callback_data limit is 64 bytes.
+            callback_data=f"project:{project.name[:50]}",
+        )
+
+    # Arrange project buttons in 2 columns
+    builder.adjust(2)
+
+    # Add pagination row if needed
+    if total_pages > 1:
+        nav_buttons: list[InlineKeyboardButton] = []
+
+        if page > 0:
+            nav_buttons.append(
+                InlineKeyboardButton(
+                    text="◀️ Назад",
+                    callback_data=f"page:{page - 1}",
+                )
+            )
+
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text=f"{page + 1}/{total_pages}",
+                callback_data="page:noop",
+            )
+        )
+
+        if page < total_pages - 1:
+            nav_buttons.append(
+                InlineKeyboardButton(
+                    text="Вперёд ▶️",
+                    callback_data=f"page:{page + 1}",
+                )
+            )
+
+        # Add nav row to the keyboard
+        markup = builder.as_markup()
+        markup.inline_keyboard.append(nav_buttons)
+        return markup
+
+    return builder.as_markup()
+
+
 def create_cancel_keyboard() -> InlineKeyboardMarkup:
     """Create keyboard with cancel button."""
     return InlineKeyboardMarkup(

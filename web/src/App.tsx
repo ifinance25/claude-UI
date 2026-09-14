@@ -2,6 +2,7 @@ import { JSX } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { ModelInfoProvider } from "@/lib/ModelInfoContext";
+import AdminPage from "@/routes/AdminPage";
 import ChatPage from "@/routes/ChatPage";
 import LoginPage from "@/routes/LoginPage";
 import SettingsPage from "@/routes/SettingsPage";
@@ -17,6 +18,12 @@ function Protected({ children }: { children: JSX.Element }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function AdminOnly({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (!user?.is_admin) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -40,6 +47,16 @@ export default function App() {
               element={
                 <Protected>
                   <SettingsPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <Protected>
+                  <AdminOnly>
+                    <AdminPage />
+                  </AdminOnly>
                 </Protected>
               }
             />

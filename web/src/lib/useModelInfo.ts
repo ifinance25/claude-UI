@@ -9,28 +9,23 @@ import type { ModelInfo } from "@/lib/types";
  * fallback'а, чтобы не плодить копии по компонентам.
  */
 export const FALLBACK_MODEL_INFO: ModelInfo = {
-  current: "claude-sonnet-5",
+  current: "claude-sonnet-4-6",
   permission_mode: "default",
   known: [
     {
-      id: "claude-fable-5",
-      label: "Claude Fable 5",
-      hint: "Самая мощная — для самых сложных задач",
+      id: "claude-sonnet-4-6",
+      label: "Claude Sonnet 4.6",
+      hint: "Бэк недоступен — показано значение по умолчанию",
     },
     {
-      id: "claude-opus-5",
-      label: "Claude Opus 5",
-      hint: "Сильная — флагман для кода и агентных задач",
-    },
-    {
-      id: "claude-sonnet-5",
-      label: "Claude Sonnet 5",
-      hint: "Сбалансированная — рабочая лошадка (значение по умолчанию)",
+      id: "claude-opus-4-8",
+      label: "Claude Opus 4.8",
+      hint: "Самый сильный — для сложных задач",
     },
     {
       id: "claude-haiku-4-5-20251001",
       label: "Claude Haiku 4.5",
-      hint: "Быстрая и дешёвая — для лёгких задач",
+      hint: "Быстрый и дешёвый — для лёгких задач",
     },
   ],
 };

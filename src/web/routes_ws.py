@@ -23,54 +23,6 @@ from src.web.ws_forwarder import WSForwarder
 
 logger = structlog.get_logger()
 
-# Генерации, продолжающиеся без открытого соединения; ключ — session_uuid,
-# значение — (задача, request_id).
-#
-# Уход в другой диалог закрывает WebSocket, но ответ Claude при этом должен
-# дорабатывать: смысл сервиса в том, что задача считается на сервере и результат
-# можно прочитать позже (в том числе из Telegram), а не в том, что ответ живёт,
-# пока открыта вкладка. Задача только публикует в шину событий — websocket она
-# не трогает, поэтому переживает его закрытие безболезненно.
-#
-# Словарь модульный по двум причинам. Во-первых, asyncio держит на задачи лишь
-# СЛАБЫЕ ссылки: оставшись без владельца, задача может быть собрана сборщиком
-# мусора прямо посреди ответа. Во-вторых, по нему новое соединение находит
-# незавершённую генерацию своей сессии — мост держит один активный процесс на
-# topic, поэтому вторую параллельную запускать нельзя.
-_detached_generations: dict[str, tuple[asyncio.Task, str]] = {}
-
-
-def _detach_generation(session_uuid: str, task: asyncio.Task, request_id: str) -> None:
-    """Оставить генерацию работать после закрытия соединения."""
-    _detached_generations[session_uuid] = (task, request_id)
-
-    def _forget(done: asyncio.Task) -> None:
-        current = _detached_generations.get(session_uuid)
-        if current is not None and current[0] is done:
-            _detached_generations.pop(session_uuid, None)
-
-    task.add_done_callback(_forget)
-
-
-async def _cancel_detached_generation(session_uuid: str) -> str | None:
-    """Снять генерацию, оставшуюся от прошлого соединения.
-
-    Возвращает её ``request_id``, если что-то действительно отменили, — вызывающий
-    решает, публиковать ли по нему ``AgentFinished``.
-    """
-    entry = _detached_generations.pop(session_uuid, None)
-    if entry is None:
-        return None
-    task, request_id = entry
-    if task.done():
-        return None
-    task.cancel()
-    try:
-        await task
-    except (asyncio.CancelledError, Exception):
-        pass
-    return request_id
-
 
 def no_project_readonly(*, user_id, whitelist, db_is_admin: bool) -> bool:
     """Должна ли сессия БЕЗ проекта запускаться в режиме readonly (C-1).
@@ -310,22 +262,6 @@ def make_ws_router(
                                     response_text="",
                                 )
                             )
-                        else:
-                            # Генерация могла остаться от ПРОШЛОГО соединения:
-                            # пользователь ушёл в другой диалог и вернулся.
-                            # «Стоп» должен работать и в этом случае, иначе
-                            # остановить фоновый ответ стало бы нечем.
-                            stopped = await _cancel_detached_generation(session_uuid)
-                            if stopped is not None:
-                                await bus.publish(
-                                    AgentFinished(
-                                        request_id=stopped,
-                                        chat_id=user_id,
-                                        topic_id=initial.topic_id,
-                                        session_uuid=session_uuid,
-                                        response_text="",
-                                    )
-                                )
                         current_gen["task"] = None
                         current_gen["request_id"] = None
                         continue
@@ -554,10 +490,6 @@ def make_ws_router(
                             await prev_task
                         except (asyncio.CancelledError, Exception):
                             pass
-                    # Та же сессия могла остаться с фоновой генерацией от
-                    # прошлого соединения — мост держит один процесс на topic,
-                    # поэтому вытесняем её, а не запускаем вторую параллельно.
-                    await _cancel_detached_generation(session.session_uuid)
 
                     # publish(UserMessageReceived) запускает всю цепочку ответа
                     # Claude и блокируется до конца — выполняем фоновой задачей,
@@ -644,18 +576,16 @@ def make_ws_router(
                 if exc is not None and not isinstance(exc, WebSocketDisconnect):
                     logger.error("ws_session_task_error", error=str(exc))
         finally:
-            # Разрыв соединения — НЕ повод обрывать ответ. Раньше здесь стоял
-            # gen_task.cancel(): переход в другой диалог закрывает WebSocket, и
-            # ответ убивался на середине — в историю не попадало ничего, а
-            # вернувшийся пользователь видел свой вопрос без ответа. Теперь
-            # генерация продолжается: события идут в шину, откуда их пишет
-            # persister, так что ответ дождётся возвращения в истории, а
-            # переподключившийся клиент увидит остаток вживую.
+            # Отменяем незавершённую фоновую генерацию, чтобы при разрыве
+            # соединения не осталось висящей publish-задачи (и подпроцесса
+            # Claude). Сам bridge закрывает подпроцесс по CancelledError.
             gen_task = current_gen["task"]
             if gen_task is not None and not gen_task.done():
-                _detach_generation(
-                    session_uuid, gen_task, current_gen["request_id"] or ""
-                )
+                gen_task.cancel()
+                try:
+                    await gen_task
+                except (asyncio.CancelledError, Exception):
+                    pass
             forwarder.unregister(session_uuid=session_uuid, queue=queue)
             # M-5: освобождаем слот соединения пользователя.
             remaining = ws_conn_counts.get(user_id, 1) - 1

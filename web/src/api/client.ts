@@ -1,14 +1,23 @@
 // REST client. credentials: 'include' so vels_session cookie is sent.
 
 import type {
+  Access,
+  AdminUser,
   ApiUser,
-  AuthConfig,
+  ArtifactsResponse,
   Attachment,
   ConnectionsInfo,
   DocFile,
+  FileContent,
+  FileEntry,
+  FileTreeResponse,
   HistoryMessage,
   ModelInfo,
   Project,
+  ProjectAccess,
+  ProjectAdmin,
+  ProjectMember,
+  SearchResponse,
   Session,
   SlashCommand,
 } from "@/lib/types";
@@ -60,11 +69,6 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
-  // Что показывать на странице входа: подключён ли Telegram-бот. Без
-  // авторизации — на /login пользователя ещё нет.
-  authConfig() {
-    return req<AuthConfig>("GET", "/api/auth/config");
-  },
   telegramLogin(payload: Record<string, unknown>) {
     return req<{ ok: boolean; user: ApiUser }>("POST", "/api/auth/telegram", payload);
   },
@@ -78,6 +82,54 @@ export const api = {
     return req<{ ok: boolean; user: ApiUser }>("POST", "/api/auth/login", {
       username,
       password,
+    });
+  },
+  adminListUsers() {
+    return req<AdminUser[]>("GET", "/api/admin/users");
+  },
+  adminCreateUser(username: string, password: string, is_admin: boolean) {
+    return req<{ user_id: number }>("POST", "/api/admin/users", {
+      username,
+      password,
+      is_admin,
+    });
+  },
+  adminListAccess(userId: number) {
+    return req<ProjectAccess[]>("GET", `/api/admin/users/${userId}/access`);
+  },
+  adminGrantAccess(
+    userId: number,
+    project_path: string,
+    access_level: "full" | "readonly",
+  ) {
+    return req<{ ok: boolean }>("POST", `/api/admin/users/${userId}/access`, {
+      project_path,
+      access_level,
+    });
+  },
+  adminRevokeAccess(userId: number, project_path: string) {
+    return req<{ ok: boolean }>(
+      "DELETE",
+      `/api/admin/users/${userId}/access?project_path=${encodeURIComponent(project_path)}`,
+    );
+  },
+  adminSetActive(userId: number, active: boolean) {
+    return req<{ ok: boolean }>(
+      "POST",
+      `/api/admin/users/${userId}/active?active=${active}`,
+    );
+  },
+  adminResetPassword(userId: number, password: string) {
+    return req<{ ok: boolean }>("POST", `/api/admin/users/${userId}/password`, {
+      password,
+    });
+  },
+  adminDeleteUser(userId: number) {
+    return req<{ ok: boolean }>("DELETE", `/api/admin/users/${userId}`);
+  },
+  adminSetUserAdmin(userId: number, is_admin: boolean) {
+    return req<{ ok: boolean }>("POST", `/api/admin/users/${userId}/admin`, {
+      is_admin,
     });
   },
   logout() {
@@ -150,6 +202,13 @@ export const api = {
   sessionFileUrl(sessionUuid: string, relPath: string) {
     return apiUrl(`/api/sessions/${sessionUuid}/file?path=${encodeURIComponent(relPath)}`);
   },
+  // Тот же файл, но для ПРОСМОТРА в браузере (inline): картинка в <img>, PDF в
+  // <iframe>. Бэкенд отдаёт inline только для image/* и application/pdf.
+  sessionFileInlineUrl(sessionUuid: string, relPath: string) {
+    return apiUrl(
+      `/api/sessions/${sessionUuid}/file?path=${encodeURIComponent(relPath)}&inline=1`,
+    );
+  },
   async uploadFile(sessionUuid: string, file: File): Promise<Attachment> {
     // Multipart нельзя слать через стандартный JSON `req` —
     // используем отдельный fetch с FormData.
@@ -167,6 +226,108 @@ export const api = {
       throw new ApiError(resp.status, `${resp.status} ${resp.statusText}: ${text}`);
     }
     return (await resp.json()) as Attachment;
+  },
+
+  // ── Admin: Projects CRUD ────────────────────────────────────
+  adminListProjects() {
+    return req<ProjectAdmin[]>("GET", "/api/admin/projects");
+  },
+  adminCreateProject(abspath: string) {
+    return req<ProjectAdmin>("POST", "/api/admin/projects", { abspath });
+  },
+  adminUpdateProject(projectId: number, abspath: string) {
+    return req<ProjectAdmin>("PATCH", `/api/admin/projects/${projectId}`, { abspath });
+  },
+  adminDeleteProject(projectId: number) {
+    return req<{ success: boolean }>("DELETE", `/api/admin/projects/${projectId}`);
+  },
+
+  // ── Admin: Accesses CRUD ───────────────────────────────────
+  adminListAccesses() {
+    return req<Access[]>("GET", "/api/admin/accesses");
+  },
+  adminCreateAccess(userId: number, projectId: number, accessLevel: string) {
+    return req<Access>("POST", "/api/admin/accesses", {
+      user_id: userId,
+      project_id: projectId,
+      access_level: accessLevel,
+    });
+  },
+  adminUpdateAccess(accessId: number, accessLevel: string) {
+    return req<Access>("PATCH", `/api/admin/accesses/${accessId}`, {
+      access_level: accessLevel,
+    });
+  },
+  adminDeleteAccess(accessId: number) {
+    return req<{ success: boolean }>("DELETE", `/api/admin/accesses/${accessId}`);
+  },
+
+  // ── Files browser (Фаза 2.2) ──────────────────────────────
+  filesTree(projectPath: string, dir = "") {
+    return req<FileTreeResponse>(
+      "GET",
+      `/api/files/tree?project_path=${encodeURIComponent(projectPath)}&dir=${encodeURIComponent(dir)}`,
+    );
+  },
+  fileContent(projectPath: string, rel: string) {
+    return req<FileContent>(
+      "GET",
+      `/api/files/content?project_path=${encodeURIComponent(projectPath)}&rel=${encodeURIComponent(rel)}`,
+    );
+  },
+  saveFile(projectPath: string, rel: string, content: string, expectedMtimeNs: number) {
+    return req<{ mtime_ns: number }>(
+      "PUT",
+      `/api/files/content?project_path=${encodeURIComponent(projectPath)}&rel=${encodeURIComponent(rel)}`,
+      { content, expected_mtime_ns: expectedMtimeNs },
+    );
+  },
+  createEntry(projectPath: string, rel: string, kind: "file" | "dir") {
+    return req<FileEntry>(
+      "POST",
+      `/api/files/entry?project_path=${encodeURIComponent(projectPath)}`,
+      { rel, kind },
+    );
+  },
+  deleteEntry(projectPath: string, rel: string) {
+    return req<{ success: boolean }>(
+      "DELETE",
+      `/api/files/entry?project_path=${encodeURIComponent(projectPath)}&rel=${encodeURIComponent(rel)}`,
+    );
+  },
+  moveEntry(projectPath: string, src: string, dst: string) {
+    return req<{ success: boolean }>(
+      "POST",
+      `/api/files/move?project_path=${encodeURIComponent(projectPath)}`,
+      { src, dst },
+    );
+  },
+  searchFiles(projectPath: string, q: string, mode: "name" | "content") {
+    return req<SearchResponse>(
+      "GET",
+      `/api/files/search?project_path=${encodeURIComponent(projectPath)}&q=${encodeURIComponent(q)}&mode=${mode}`,
+    );
+  },
+
+  // ── Artifacts (Фаза 2.3) ──────────────────────────────────
+  filesArtifacts(projectPath: string) {
+    return req<ArtifactsResponse>(
+      "GET",
+      `/api/files/artifacts?project_path=${encodeURIComponent(projectPath)}`,
+    );
+  },
+  dismissArtifact(projectPath: string, rel: string) {
+    return req<{ success: boolean }>(
+      "POST",
+      `/api/files/artifacts/dismiss?project_path=${encodeURIComponent(projectPath)}`,
+      { rel },
+    );
+  },
+  undismissArtifact(projectPath: string, rel: string) {
+    return req<{ success: boolean }>(
+      "DELETE",
+      `/api/files/artifacts/dismiss?project_path=${encodeURIComponent(projectPath)}&rel=${encodeURIComponent(rel)}`,
+    );
   },
 
   // ── Connect Services (Фаза 3) ─────────────────────────────
@@ -204,4 +365,38 @@ export const api = {
     return req<{ message: string }>("DELETE", "/api/apikey");
   },
 
+  // ── Project members (self-service sharing) ────────────────
+  // Управление участниками проекта пользователем с full-доступом (не админка).
+  // Ключ — числовой project_id. Не-админ управляет только своими грантами.
+  listMembers(projectId: number) {
+    return req<ProjectMember[]>("GET", `/api/projects/${projectId}/members`);
+  },
+  addMember(
+    projectId: number,
+    identifier: string,
+    accessLevel: "full" | "readonly",
+  ) {
+    return req<{ user_id: number; access_level: string }>(
+      "POST",
+      `/api/projects/${projectId}/members`,
+      { identifier, access_level: accessLevel },
+    );
+  },
+  updateMember(
+    projectId: number,
+    userId: number,
+    accessLevel: "full" | "readonly",
+  ) {
+    return req<{ user_id: number; access_level: string }>(
+      "PATCH",
+      `/api/projects/${projectId}/members/${userId}`,
+      { access_level: accessLevel },
+    );
+  },
+  removeMember(projectId: number, userId: number) {
+    return req<{ removed: number }>(
+      "DELETE",
+      `/api/projects/${projectId}/members/${userId}`,
+    );
+  },
 };

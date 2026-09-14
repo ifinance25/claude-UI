@@ -12,18 +12,20 @@ import { TextEvent } from "@/components/events/TextEvent";
 import { ToolUseEvent } from "@/components/events/ToolUseEvent";
 import { UsageEvent } from "@/components/events/UsageEvent";
 import { UserMessageEvent } from "@/components/events/UserMessageEvent";
-import { BookIcon, FolderIcon } from "@/components/icons";
+import { BookIcon, CloseIcon, FilesIcon, FolderIcon, LightbulbIcon, NotesIcon, PackageIcon, UsersIcon } from "@/components/icons";
 import DocsPanel from "@/components/DocsPanel";
+import FilesPanel from "@/components/files/FilesPanel";
+import ArtifactsPanel from "@/components/artifacts/ArtifactsPanel";
+import ProjectMembersPanel from "@/components/ProjectMembersPanel";
 import { ContinueInTelegram } from "@/components/ContinueInTelegram";
 import { LiveActivityPanel } from "@/components/LiveActivityPanel";
 import { activityFromEvent, type LiveActivity } from "@/lib/liveActivity";
 import { useAuth } from "@/auth/AuthContext";
 import MessageInput from "@/components/MessageInput";
 import ThinkingIndicator from "@/components/ThinkingIndicator";
+import UsageBadge from "@/components/UsageBadge";
 import { deriveTitle, sessionTitle } from "@/lib/sessionTitle";
-import { usageBreakdown } from "@/lib/usage";
-import { mergeTargetIndex } from "@/lib/bubbleMerge";
-import { pendingRequestId } from "@/lib/pendingTurn";
+import { parseUsage, usageBreakdown } from "@/lib/usage";
 import { useModelInfo } from "@/lib/useModelInfo";
 import ContextGauge from "@/components/ContextGauge";
 import { contextWindowFor } from "@/lib/modelContext";
@@ -46,6 +48,7 @@ interface Props {
 
 let bubbleCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${++bubbleCounter}`;
+
 // Rebuilds bubbles from persisted history.
 //
 // `usageShown` (optional) is the live dedup Set: usage rows whose
@@ -93,11 +96,11 @@ function historyToBubbles(
       });
     } else if (m.type === "streaming_update") {
       if ((m.kind ?? "log") === "text") {
-        const idx = mergeTargetIndex(bubbles, m.request_id);
-        if (idx >= 0) {
-          bubbles[idx] = {
-            ...bubbles[idx],
-            content: bubbles[idx].content + m.content,
+        const last = bubbles[bubbles.length - 1];
+        if (last && last.kind === "text" && last.requestId === m.request_id) {
+          bubbles[bubbles.length - 1] = {
+            ...last,
+            content: last.content + m.content,
           };
           continue;
         }
@@ -164,9 +167,17 @@ export default function Chat({ session, onNewChat }: Props) {
   // 4-секундного reload сайдбара. Держим отдельно, чтобы текст хедера
   // не зависел от того, открыт ли drawer заметок.
   const [displayNotes, setDisplayNotes] = useState(session.notes ?? "");
+  const [notesStatus, setNotesStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [notesOpen, setNotesOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
-  // Уровень детализации из настроек. Кнопки-тоггла в шапке нет (шапку чистим),
-  // но уровень по-прежнему решает, показывать ли размышления внутри ответа.
+  const [filesOpen, setFilesOpen] = useState(false);
+  const [artifactsOpen, setArtifactsOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [usage, setUsage] = useState<{ tokens: number; costUsd: number }>({
+    tokens: 0,
+    costUsd: 0,
+  });
+  // Уровень детализации (verbose). На 2 показываем размышления Claude.
   const [verbose, setVerbose] = useState<number>(1);
   const { info } = useModelInfo(true);
   const [ctxTokens, setCtxTokens] = useState(0);
@@ -302,6 +313,7 @@ export default function Chat({ session, onNewChat }: Props) {
     let cancelled = false;
     setBubbles([]);
     setError(null);
+    setUsage({ tokens: 0, costUsd: 0 });
     setThinkingRequestId(null);
     if (thinkingTimerRef.current !== null) {
       window.clearTimeout(thinkingTimerRef.current);
@@ -319,16 +331,6 @@ export default function Chat({ session, onNewChat }: Props) {
         setBubbles(historyToBubbles(history, usageShownRef.current));
         if (history.length) {
           lastEventIdRef.current = history[history.length - 1].event_id;
-        }
-        // Ход мог остаться незавершённым: пользователь ушёл в другой диалог,
-        // пока Claude отвечал. Генерация при этом продолжается, но пока идут
-        // размышления, в историю писать нечего — и чат выглядел пустым,
-        // будто его сбросили. Возвращаем индикатор «Claude думает…» и
-        // сторожевой таймер (иначе он висел бы вечно, если ход всё-таки умер).
-        const pending = pendingRequestId(history);
-        if (pending) {
-          setThinkingRequestId(pending);
-          armThinkingWatchdog();
         }
       } catch (e) {
         if (!cancelled) setError(`Не удалось загрузить историю: ${(e as Error).message}`);
@@ -387,8 +389,6 @@ export default function Chat({ session, onNewChat }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.session_uuid]);
 
-  // Уровень детализации живёт на сервере (настройки → «Логи») и общий с
-  // Telegram-командой /verbose. Читаем один раз на монтировании.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -396,7 +396,7 @@ export default function Chat({ session, onNewChat }: Props) {
         const s = await api.getSettings();
         if (!cancelled) setVerbose(s.verbose_level);
       } catch {
-        // молча — остаётся дефолт 1
+        // молча — дефолт verbose=1
       }
     })();
     return () => {
@@ -486,10 +486,10 @@ export default function Chat({ session, onNewChat }: Props) {
       // пропал» и «появился bubble».
       if (msg.kind === "text") {
         setBubbles((b) => {
-          const idx = mergeTargetIndex(b, msg.request_id);
-          if (idx >= 0) {
-            const merged = { ...b[idx], content: b[idx].content + msg.content };
-            return [...b.slice(0, idx), merged, ...b.slice(idx + 1)];
+          const last = b[b.length - 1];
+          if (last && last.kind === "text" && last.requestId === msg.request_id) {
+            const merged = { ...last, content: last.content + msg.content };
+            return [...b.slice(0, -1), merged];
           }
           return [
             ...b,
@@ -518,6 +518,12 @@ export default function Chat({ session, onNewChat }: Props) {
             requestId: msg.request_id,
           },
         ]);
+        // Накапливаем расход в хедер-бейдж (parseUsage — NaN-safe, CR3-10/20).
+        const acc = parseUsage(msg.metadata);
+        setUsage((cur) => ({
+          tokens: cur.tokens + acc.tokens,
+          costUsd: cur.costUsd + acc.costUsd,
+        }));
         trackContext(msg.metadata);
         return;
       }
@@ -571,6 +577,12 @@ export default function Chat({ session, onNewChat }: Props) {
           ...b,
           { id: nextId("usage"), kind: "usage", content: "", metadata: usageMeta },
         ]);
+        // Накапливаем суммарный расход для UsageBadge в хедере (NaN-safe).
+        const acc = parseUsage(msg.usage);
+        setUsage((cur) => ({
+          tokens: cur.tokens + acc.tokens,
+          costUsd: cur.costUsd + acc.costUsd,
+        }));
         trackContext(usageMeta);
       }
       return;
@@ -618,6 +630,7 @@ export default function Chat({ session, onNewChat }: Props) {
     setNotes(session.notes ?? "");
     setDisplayNotes(session.notes ?? "");
     notesSavedRef.current = session.notes ?? "";
+    setNotesStatus("idle");
   }, [session.session_uuid, session.notes]);
 
   useEffect(() => {
@@ -625,13 +638,16 @@ export default function Chat({ session, onNewChat }: Props) {
       window.clearTimeout(notesTimerRef.current);
     }
     if (notes === notesSavedRef.current) return;
+    setNotesStatus("saving");
     notesTimerRef.current = window.setTimeout(async () => {
       try {
         await api.patchSessionNotes(session.session_uuid, notes);
         notesSavedRef.current = notes;
         setDisplayNotes(notes);
+        setNotesStatus("saved");
       } catch (e) {
-        setError(`Не удалось сохранить заголовок чата: ${(e as Error).message}`);
+        setNotesStatus("error");
+        setError(`Не удалось сохранить заметки: ${(e as Error).message}`);
       }
     }, NOTES_DEBOUNCE_MS);
     return () => {
@@ -778,9 +794,9 @@ export default function Chat({ session, onNewChat }: Props) {
         return (
           <TextEvent
             content={b.content}
-            // Блок размышлений виден со 2-го уровня «Логов» (свёрнут,
-            // разворачивается кликом). Тоггла в шапке нет — уровень задаётся
-            // в настройках и общий с Telegram-командой /verbose.
+            // Лампочка «Размышления» в шапке: вкл (verbose ≥ 2) → блок виден
+            // (свёрнут, разворачивается кликом); выкл → блока нет вовсе. Даёт
+            // мгновенную обратную связь и не «выскакивает» в конце ответа.
             reasoningOn={verbose >= 2}
             live={b.id === liveTextId}
           />
@@ -896,8 +912,55 @@ export default function Chat({ session, onNewChat }: Props) {
               ничего не обрезается. Активная кнопка/тогл подсвечены токеном
               выбора --bg-hover. */}
           <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <UsageBadge tokens={usage.tokens} costUsd={usage.costUsd} />
             <button
-              onClick={() => setDocsOpen((v) => !v)}
+              onClick={() =>
+                setNotesOpen((v) => {
+                  const next = !v;
+                  // Заметки и Документация — взаимоисключающие панели.
+                  if (next) setDocsOpen(false);
+                  return next;
+                })
+              }
+              className={`icon-btn relative flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm transition-colors ${
+                notesOpen
+                  ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
+                  : "text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+              }`}
+              title={
+                notesStatus === "saving"
+                  ? "Заметки · сохраняем…"
+                  : notesStatus === "saved"
+                    ? "Заметки · сохранено"
+                    : notesStatus === "error"
+                      ? "Заметки · ошибка сохранения"
+                      : "Заметки"
+              }
+              aria-label="Заметки"
+              aria-pressed={notesOpen}
+            >
+              <NotesIcon size={18} />
+              <span>Заметки</span>
+              {/* Статус автосохранения — точка в углу, чтобы не двигать ряд
+                  (прежде «· сохранено» меняло ширину кнопки и всё дёргалось). */}
+              {notesStatus === "saving" && (
+                <span className="absolute right-1 top-1 h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+              )}
+              {notesStatus === "saved" && (
+                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              )}
+              {notesStatus === "error" && (
+                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-red-400" />
+              )}
+            </button>
+            <button
+              onClick={() =>
+                setDocsOpen((v) => {
+                  const next = !v;
+                  if (next) setNotesOpen(false);
+                  return next;
+                })
+              }
               className={`icon-btn flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm transition-colors ${
                 docsOpen
                   ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
@@ -910,6 +973,92 @@ export default function Chat({ session, onNewChat }: Props) {
               <BookIcon size={18} />
               <span>Документация</span>
             </button>
+            {session.project_path && (
+              <button
+                onClick={() =>
+                  setFilesOpen((v) => {
+                    const next = !v;
+                    if (next) setArtifactsOpen(false);
+                    return next;
+                  })
+                }
+                className={`icon-btn flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm transition-colors ${
+                  filesOpen
+                    ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
+                    : "text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                }`}
+                title="Файлы проекта"
+                aria-label="Файлы"
+                aria-pressed={filesOpen}
+              >
+                <FilesIcon size={18} />
+                <span>Файлы</span>
+              </button>
+            )}
+            {session.project_path && (
+              <button
+                onClick={() =>
+                  setArtifactsOpen((v) => {
+                    const next = !v;
+                    if (next) setFilesOpen(false);
+                    return next;
+                  })
+                }
+                className={`icon-btn flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm transition-colors ${
+                  artifactsOpen
+                    ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
+                    : "text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                }`}
+                title="Артефакты Claude"
+                aria-label="Артефакты"
+                aria-pressed={artifactsOpen}
+              >
+                <PackageIcon size={18} />
+                <span>Артефакты</span>
+              </button>
+            )}
+            {/* «Участники» — самообслуживание шаринга проекта. Видна ТОЛЬКО
+                когда бэк отдал can_manage_members=true (тот же предикат, что
+                серверный /members: admin ИЛИ явный full-грант на ИМЕННО этот
+                проект) И сессия привязана к реальному проекту
+                (project_id != null). Не клиентская эвристика поверх
+                resolve_project_access — та шире и давала кнопку там, где
+                /members ответил бы 403 (L-8). */}
+            {session.project_id != null && session.can_manage_members && (
+              <button
+                onClick={() => setMembersOpen(true)}
+                className="icon-btn flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm text-[var(--fg-secondary)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                title="Участники проекта"
+                aria-label="Участники"
+              >
+                <UsersIcon size={18} />
+                <span>Участники</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                const next = verbose >= 2 ? 1 : 2;
+                setVerbose(next);
+                // Сохраняем выбор на сервере — иначе при перезагрузке тоггл
+                // сбрасывался к серверному значению (находка аудита #20).
+                void api.patchSettings(next as 0 | 1 | 2 | 3).catch(() => {});
+              }}
+              className={`icon-btn flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 text-sm transition-colors ${
+                verbose >= 2
+                  ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
+                  : "text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+              }`}
+              title={
+                verbose >= 2
+                  ? "Размышления показываются — нажмите, чтобы скрыть"
+                  : "Размышления скрыты — нажмите, чтобы показывать"
+              }
+              aria-label="Размышления"
+              aria-pressed={verbose >= 2}
+            >
+              <LightbulbIcon size={18} />
+              <span>Размышления</span>
+            </button>
             <ContinueInTelegram
               botUsername={user?.telegram_bot_username}
               sessionUuid={session.session_uuid}
@@ -919,18 +1068,45 @@ export default function Chat({ session, onNewChat }: Props) {
         </div>
       </header>
 
-      {/* Слот панели хедера: документация проекта, разворачивается кнопкой. */}
+      {/* Единый слот панели хедера: показывает РОВНО одну из
+          {notes | docs | none}. mode="wait" заставляет одну панель
+          полностью схлопнуться (height→0) прежде чем развернётся
+          другая — переход Заметки↔Документация без рывка высоты.
+          Заметки и Доки взаимоисключающие (см. обработчики кнопок). */}
       <AnimatePresence mode="wait" initial={false}>
-        {docsOpen && (
+        {(notesOpen || docsOpen) && (
           <motion.div
-            key="docs"
+            key={notesOpen ? "notes" : "docs"}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.24, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <DocsPanel onClose={() => setDocsOpen(false)} />
+            {notesOpen ? (
+              <div className="mx-auto w-full max-w-4xl px-6 pt-4">
+                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-sidebar)] p-4">
+                  <div className="mb-2 flex items-center justify-between text-[12px] font-semibold uppercase tracking-wider text-[var(--fg-muted)]">
+                    <span>Заметки</span>
+                    <button
+                      onClick={() => setNotesOpen(false)}
+                      className="rounded p-1 transition-colors hover:text-[var(--fg-primary)]"
+                    >
+                      <CloseIcon size={16} />
+                    </button>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Свободные заметки по этому чату — сохраняются автоматически."
+                    className="w-full resize-y rounded-md bg-transparent text-[15px] text-[var(--fg-primary)] placeholder:text-[var(--fg-muted)] focus:outline-none"
+                  />
+                </div>
+              </div>
+            ) : (
+              <DocsPanel onClose={() => setDocsOpen(false)} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -959,7 +1135,6 @@ export default function Chat({ session, onNewChat }: Props) {
           ) : (
             <ChatEmptyState
               projectName={session.project_name || "Без проекта"}
-              projectMissing={!session.project_name}
               modelLabel={info?.known.find((m) => m.id === info?.current)?.label}
               modelId={info?.current}
             />
@@ -1002,6 +1177,59 @@ export default function Chat({ session, onNewChat }: Props) {
       {messageInput}
       {centeredComposer && <div className="flex-1" aria-hidden="true" />}
       </main>
+      {filesOpen && session.project_path && (
+        <FilesPanel
+          projectPath={session.project_path}
+          sessionUuid={session.session_uuid}
+          onClose={() => setFilesOpen(false)}
+        />
+      )}
+      {artifactsOpen && session.project_path && (
+        <ArtifactsPanel
+          projectPath={session.project_path}
+          sessionUuid={session.session_uuid}
+          onClose={() => setArtifactsOpen(false)}
+        />
+      )}
+      {/* Модалка «Участники» — тот же framer-motion оверлей, что и SettingsModal:
+          затемнение с закрытием по клику вне карточки. Внутри — переиспользуемая
+          ProjectMembersPanel (у неё свой заголовок). project_id гарантированно
+          не-null: кнопка-открывашка сама так гейтится. */}
+      <AnimatePresence>
+        {membersOpen && session.project_id != null && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setMembersOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-[var(--bg-elevated)] shadow-2xl ring-1 ring-[var(--border-subtle)]"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <header className="flex items-center justify-end px-4 pt-4">
+                <button
+                  onClick={() => setMembersOpen(false)}
+                  className="rounded-xl p-2 text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                  title="Закрыть"
+                  aria-label="Закрыть"
+                >
+                  <CloseIcon size={18} />
+                </button>
+              </header>
+              <div className="overflow-y-auto px-6 pb-6">
+                <ProjectMembersPanel projectId={session.project_id} />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

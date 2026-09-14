@@ -10,6 +10,8 @@ declare global {
   }
 }
 
+const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME ?? "";
+
 /**
  * Снимает секреты входа (`token`/`magic`) из адресной строки браузера ДО
  * того как страница успеет отрендерить внешний telegram-widget или сделать
@@ -54,17 +56,7 @@ export default function LoginPage() {
     secretsRef.current = consumeAuthSecretsFromUrl();
   }
   const { token: capturedToken, magic: capturedMagic } = secretsRef.current;
-  // Telegram в light необязателен (установщик разрешает пропустить токен).
-  // null = ещё не спросили сервер: до ответа Telegram-блоки не рисуем, чтобы
-  // они не мигали в веб-only установке.
-  const [telegram, setTelegram] = useState<{
-    enabled: boolean;
-    username: string;
-  } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Magic-ссылка не сработала → предложить запросить свежую. Отдельным флагом,
-  // а не текстом ошибки: ответ про бота приходит асинхронно и может опоздать.
-  const [magicLinkFailed, setMagicLinkFailed] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -72,35 +64,11 @@ export default function LoginPage() {
   const consumedMagicRef = useRef<string | null>(null);
   const consumedTokenRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      let cfg = { enabled: false, username: "" };
-      try {
-        const resp = await api.authConfig();
-        cfg = {
-          enabled: Boolean(resp.telegram_enabled),
-          username: resp.telegram_bot_username ?? "",
-        };
-      } catch {
-        // Сервер не ответил — молчим про Telegram: обещать бота, которого
-        // может не быть, хуже, чем не показать блок. Вход по логину/паролю
-        // работает в любой установке.
-      }
-      if (cancelled) return;
-      setTelegram(cfg);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const submitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password) return;
     setSubmitting(true);
     setError(null);
-    setMagicLinkFailed(false);
     try {
       await api.login(username.trim(), password);
       await refresh();
@@ -123,8 +91,10 @@ export default function LoginPage() {
         await refresh();
         nav("/", { replace: true });
       } catch (e) {
-        setError(`Не удалось войти по magic-ссылке: ${(e as Error).message}.`);
-        setMagicLinkFailed(true);
+        setError(
+          `Не удалось войти по magic-ссылке: ${(e as Error).message}. ` +
+            "Запросите свежую ссылку через /weblogin в боте."
+        );
       }
     })();
   }, [capturedMagic, nav, refresh]);
@@ -146,7 +116,7 @@ export default function LoginPage() {
   }, [capturedToken, nav, refresh]);
 
   useEffect(() => {
-    if (!telegram?.enabled || !telegram.username) return;
+    if (!BOT_USERNAME) return;
     // Не грузим внешний telegram-widget, пока в процессе вход по token/magic:
     // лишний внешний скрипт при активном секрет-флоу не нужен. (К моменту
     // этого effect'а секреты уже сняты с URL в consumeAuthSecretsFromUrl.)
@@ -168,7 +138,7 @@ export default function LoginPage() {
     const s = document.createElement("script");
     s.src = "https://telegram.org/js/telegram-widget.js?22";
     s.async = true;
-    s.setAttribute("data-telegram-login", telegram.username);
+    s.setAttribute("data-telegram-login", BOT_USERNAME);
     s.setAttribute("data-size", "large");
     s.setAttribute("data-radius", "8");
     s.setAttribute("data-onauth", "onTelegramAuth(user)");
@@ -178,9 +148,7 @@ export default function LoginPage() {
     return () => {
       node.replaceChildren();
     };
-  }, [nav, refresh, capturedToken, capturedMagic, telegram]);
-
-  const telegramReady = Boolean(telegram?.enabled);
+  }, [nav, refresh, capturedToken, capturedMagic]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-6">
@@ -189,12 +157,10 @@ export default function LoginPage() {
           <SparklesIcon size={40} />
         </div>
         <h1 className="text-3xl font-semibold text-[var(--fg-primary)]">
-          Vels Claude Light
+          Vels-Claude
         </h1>
         <p className="mt-2 text-base text-[var(--fg-muted)]">
-          {telegramReady
-            ? "Войдите через Telegram, чтобы продолжить"
-            : "Войдите, чтобы продолжить"}
+          Войдите через Telegram, чтобы продолжить
         </p>
 
         {/* Вход по логину/паролю (локальные аккаунты от админа) */}
@@ -233,29 +199,26 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {telegramReady && (
-          <>
-            <div className="mt-8">
+        <div className="mt-8">
+          {BOT_USERNAME ? (
+            <>
               <p className="mb-3 text-sm text-[var(--fg-muted)]">или через Telegram</p>
               <div ref={widgetRef} className="flex justify-center" />
-            </div>
+            </>
+          ) : null}
+        </div>
 
-            <p className="mt-8 text-xs text-[var(--fg-muted)]">
-              Получить ссылку для входа: отправьте{" "}
-              <code className="rounded-md bg-[var(--bg-hover)] px-1.5 py-0.5 text-[var(--fg-secondary)]">
-                /weblogin
-              </code>{" "}
-              боту в Telegram.
-            </p>
-          </>
-        )}
+        <p className="mt-8 text-xs text-[var(--fg-muted)]">
+          Получить ссылку для входа: отправьте{" "}
+          <code className="rounded-md bg-[var(--bg-hover)] px-1.5 py-0.5 text-[var(--fg-secondary)]">
+            /weblogin
+          </code>{" "}
+          боту в Telegram.
+        </p>
 
         {error && (
           <p className="mt-5 rounded-xl border border-red-700/40 bg-red-900/20 px-4 py-3 text-sm text-red-300">
             {error}
-            {magicLinkFailed && telegramReady
-              ? " Запросите свежую ссылку через /weblogin в боте."
-              : null}
           </p>
         )}
       </div>

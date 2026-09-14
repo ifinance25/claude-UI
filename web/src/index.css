@@ -79,22 +79,6 @@ input, textarea, button, select {
   letter-spacing: inherit;
 }
 
-/* Автозаполнение браузера. Chrome/Safari красят подставленное поле своим
- * светло-голубым (#e8f0fe) поверх background — в тёмной теме форма входа
- * выглядела чужой. Цвет фона задаём внутренней тенью (сам background
- * браузер перебивает), текст — -webkit-text-fill-color, а длинный transition
- * откладывает возврат браузерного фона за пределы жизни страницы. */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-  -webkit-text-fill-color: var(--fg-primary);
-  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
-  box-shadow: 0 0 0 1000px var(--bg-input) inset;
-  caret-color: var(--fg-primary);
-  transition: background-color 9999s ease-in-out 0s;
-}
-
 /* Доступность: уважаем «уменьшить движение» — гасим enter/blur-анимации и
  * переходы для тех, кому они мешают (вестибулярные расстройства и т.п.).
  * Typewriter на JS это не трогает; критично, что появилось много blur-входов. */

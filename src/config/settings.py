@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -28,26 +27,6 @@ def _parse_bool(value: str, *, default: bool) -> bool:
     if normalized in {"0", "false", "no", "off"}:
         return False
     return default
-
-
-_UNRESOLVED_PLACEHOLDER = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}")
-
-
-def _expand_env(raw: str) -> str:
-    """Подставляет ${VAR} из окружения; НЕразрешённые плейсхолдеры вычищает.
-
-    os.path.expandvars оставляет ``${VAR}`` буквально, если переменной нет, — и
-    строка-плейсхолдер попадает в конфиг как обычное значение. Для
-    telegram.token это ломало всю защиту: ``if not settings.get_bot_token()``
-    видит непустую строку "${TELEGRAM_BOT_TOKEN}", валидация пропускает старт,
-    и приложение падает уже в aiogram с "Token is invalid!". На сервере это
-    выглядит как рестарт-петля юнита, а вместе с ботом ложится и веб — процесс
-    один. Поймано прогоном на живом сервере после ручного удаления токена
-    из .env.
-
-    Нераскрытый плейсхолдер — это всегда отсутствующее значение, а не текст.
-    """
-    return _UNRESOLVED_PLACEHOLDER.sub("", os.path.expandvars(raw))
 
 
 def _deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -387,7 +366,7 @@ class Settings(BaseSettings):
             raw_config = f.read()
 
         # Expand environment variables in the format ${VAR_NAME}
-        expanded_config = _expand_env(raw_config)
+        expanded_config = os.path.expandvars(raw_config)
         config_data = yaml.safe_load(expanded_config) or {}
 
         # Merge local override if present.
@@ -397,7 +376,7 @@ class Settings(BaseSettings):
         if local_path.exists():
             with open(local_path, encoding="utf-8") as f:
                 local_raw = f.read()
-            local_expanded = _expand_env(local_raw)
+            local_expanded = os.path.expandvars(local_raw)
             local_data = yaml.safe_load(local_expanded) or {}
             config_data = _deep_merge_dicts(config_data, local_data)
 
@@ -458,37 +437,6 @@ class Settings(BaseSettings):
         ]
 
         return sorted(project_paths, key=lambda p: p.name.lower())
-
-    def get_light_project_paths(self) -> list[Path]:
-        """Проекты, видимые интерфейсу light: ровно один.
-
-        Light строится вокруг работы с одним проектом — выбор проекта и папок
-        из веб-интерфейса вырезан. Ограничение должно применяться независимо от
-        того, каким входом поднят сервис: scripts/run_web.py (Telegram не
-        настроен) или python -m src.main (настроен). Пока оно жило только в
-        run_web.py, подключение бота молча возвращало в браузер полный список —
-        на живом сервере /api/projects отдавал два проекта вместо одного, и
-        документация про «один проект» становилась неверной для половины
-        сценариев установки.
-
-        Лишние проекты не отбрасываются молча: их пути уходят в лог, иначе для
-        человека это выглядит как пропажа его каталогов.
-        """
-        project_paths = self.get_project_paths()
-        if len(project_paths) > 1:
-            logger.warning(
-                "multiple_projects_found",
-                using=str(project_paths[0]),
-                ignored=[str(p) for p in project_paths[1:]],
-                hint="Light работает с одним проектом. Укажите нужный в projects.paths или PROJECTS_DIR.",
-            )
-            return project_paths[:1]
-        if not project_paths:
-            logger.warning(
-                "no_projects_configured",
-                hint="Задайте PROJECTS_DIR (папка, внутри которой лежит проект) или projects.paths в config.yaml.",
-            )
-        return project_paths
 
     def get_session_database_path(self) -> Path:
         """Get the SQLite database path for persisted topic sessions."""

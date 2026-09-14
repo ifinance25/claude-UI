@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { api } from "@/api/client";
-import { decideNewChat } from "@/lib/newSession";
 import { useAuth } from "@/auth/AuthContext";
 import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FolderIcon,
   NewChatIcon,
   PanelLeftIcon,
   SearchIcon,
@@ -11,6 +14,7 @@ import {
   TrashIcon,
 } from "@/components/icons";
 import Logo from "@/components/Logo";
+import NewChatDialog from "@/components/NewChatDialog";
 import { sessionTitle } from "@/lib/sessionTitle";
 import type { Project, Session } from "@/lib/types";
 
@@ -135,16 +139,24 @@ export default function Sidebar({
 }: Props) {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  // Пустой список projects значит либо «ещё не загрузились», либо «их нет».
-  // Без этого различия кнопка «Новый чат», нажатая до загрузки, создавала
-  // сессию с project_path=null — Claude уходил работать в data/scratch, и
-  // привязать проект такому чату уже нельзя.
-  const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
+  const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [foldersOpen, setFoldersOpen] = useState(true);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const debounceRef = useRef<number | null>(null);
+
+  const toggleProject = (path: string) => {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
 
   const initialSelectionDoneRef = useRef(false);
 
@@ -152,7 +164,6 @@ export default function Sidebar({
     try {
       const [p, s] = await Promise.all([api.listProjects(), api.listSessions(q)]);
       setProjects(p);
-      setProjectsLoaded(true);
       setSessions(s);
       setError(null);
       // После первой загрузки авто-выбираем самую свежую сессию, если
@@ -238,23 +249,27 @@ export default function Sidebar({
     }
   };
 
-  // В light-версии проект ровно один — выбирать не из чего, диалог не нужен.
-  // Но создавать чат до того, как список проектов загрузился, нельзя: сессия
-  // уйдёт в scratch безвозвратно. Пока грузится — кнопка недоступна; если
-  // проектов действительно нет — говорим об этом вместо тихого scratch.
   const onNewChat = () => {
-    const decision = decideNewChat(projects, projectsLoaded);
-    if (decision.action === "wait") return;
-    if (decision.action === "no-projects") {
-      setError(
-        "Проект не подключён: положите папку проекта внутрь PROJECTS_DIR и перезапустите сервис.",
-      );
+    if (projects.length === 0) {
+      void newSession(null);
       return;
     }
-    void newSession(decision.project as Project);
+    setNewChatOpen(true);
   };
 
-  // Список показывает все диалоги единственного проекта.
+  const newChatDialog = newChatOpen && (
+    <NewChatDialog
+      projects={projects}
+      onClose={() => setNewChatOpen(false)}
+      onPick={(p) => {
+        setNewChatOpen(false);
+        void newSession(p);
+      }}
+    />
+  );
+
+  // Глобальный список всегда показывает ВСЕ диалоги — без фильтрации по
+  // проекту. activeProject влияет только на подсветку строки папки.
   const dateGroups = useMemo(() => groupByDate(sessions), [sessions]);
 
   // Свёрнутая мини-панель: только две иконки (развернуть + новый чат).
@@ -269,7 +284,6 @@ export default function Sidebar({
       </button>
       <button
         onClick={onNewChat}
-        disabled={!projectsLoaded}
         className="mt-2 rounded-xl p-2.5 text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
         title="Новый чат"
       >
@@ -299,7 +313,6 @@ export default function Sidebar({
       <div className="px-4 pt-2">
         <button
           onClick={onNewChat}
-          disabled={!projectsLoaded}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-[var(--fg-primary)] hover:bg-[var(--bg-hover)]"
         >
           <NewChatIcon size={20} />
@@ -329,6 +342,149 @@ export default function Sidebar({
 
       {/* Прокручиваемая середина */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-3">
+        {/* Папки / Проекты */}
+        <div>
+          <button
+            onClick={() => setFoldersOpen((v) => !v)}
+            className="flex w-full items-center gap-1.5 px-3 pb-1.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--fg-muted)] hover:text-[var(--fg-secondary)]"
+          >
+            {foldersOpen ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+            <span>Папки</span>
+          </button>
+          <AnimatePresence initial={false}>
+            {foldersOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+            <div className="space-y-1">
+              <button
+                onClick={() => setActiveProject(null)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition-colors ${
+                  activeProject === null
+                    ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
+                    : "text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                }`}
+                title="Показать все проекты"
+              >
+                <FolderIcon size={20} />
+                <span className="flex-1 truncate text-left">Все проекты</span>
+                <span className="text-xs text-[var(--fg-muted)]">
+                  {sessions.length}
+                </span>
+              </button>
+              {projects.length === 0 && (
+                user?.is_admin ? (
+                  <div className="px-3 py-2 text-sm text-[var(--fg-muted)]">
+                    Нет проектов. Задайте <code>PROJECTS_DIR</code> или
+                    перечислите <code>projects.paths</code> в config.yaml.
+                  </div>
+                ) : (
+                  // Не-админ не может выдать себе доступ сам (бэкенд deny-by-default),
+                  // поэтому вместо конфиг-подсказки показываем понятный призыв.
+                  <div className="px-3 py-2 text-sm text-[var(--fg-muted)]">
+                    У вас пока нет доступа к проектам. Попросите администратора
+                    выдать доступ.
+                  </div>
+                )
+              )}
+              {projects.map((p, pi) => {
+                const projSessions = sessions.filter(
+                  (s) => s.project_path === p.path,
+                );
+                const isExpanded = expandedProjects.has(p.path);
+                return (
+                  <MotionItem key={p.path} index={pi}>
+                    <div
+                      className={`group flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-[15px] transition-colors ${
+                        activeProject === p.path
+                          ? "bg-[var(--bg-hover)] text-[var(--fg-primary)]"
+                          : "text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+                      }`}
+                    >
+                      <button
+                        onClick={() => toggleProject(p.path)}
+                        className="shrink-0"
+                        title={isExpanded ? "Свернуть" : "Развернуть"}
+                        aria-label={isExpanded ? "Свернуть папку" : "Развернуть папку"}
+                      >
+                        <ChevronRightIcon
+                          size={14}
+                          className={`transition-transform duration-200 ${
+                            isExpanded ? "rotate-90" : ""
+                          }`}
+                        />
+                      </button>
+                      <button
+                        onClick={() => setActiveProject(p.path)}
+                        title={p.path}
+                        className="flex flex-1 items-center gap-2 truncate text-left"
+                      >
+                        <FolderIcon size={18} />
+                        <span className="flex-1 truncate">{p.name}</span>
+                        <span className="text-xs text-[var(--fg-muted)]">
+                          {projSessions.length}
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void newSession(p);
+                        }}
+                        className="shrink-0 rounded-lg p-1 opacity-0 transition-opacity hover:bg-[var(--bg-canvas)] group-hover:opacity-70 hover:!opacity-100"
+                        title="Новый чат в этом проекте"
+                        aria-label="Новый чат в этом проекте"
+                      >
+                        <NewChatIcon size={16} />
+                      </button>
+                    </div>
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.24, ease: "easeOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="ml-6 space-y-1 border-l border-[var(--border-subtle)] pl-2 pt-1">
+                            {projSessions.length > 0 ? (
+                              [...projSessions]
+                                .sort(
+                                  (a, b) =>
+                                    new Date(b.last_activity).getTime() -
+                                    new Date(a.last_activity).getTime(),
+                                )
+                                .map((s, si) => (
+                                  <MotionItem key={s.session_uuid} index={si}>
+                                    <SessionRow
+                                      session={s}
+                                      active={s.session_uuid === activeSessionUuid}
+                                      onClick={() => onSelectSession(s)}
+                                      onDelete={() => void deleteSession(s)}
+                                    />
+                                  </MotionItem>
+                                ))
+                            ) : (
+                              <div className="py-1.5 text-sm text-[var(--fg-muted)]">
+                                Нет диалогов
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </MotionItem>
+                );
+              })}
+            </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Чаты сгруппированы по дате */}
         <div className="mt-5 space-y-4">
@@ -361,6 +517,18 @@ export default function Sidebar({
         </div>
       </div>
 
+      {/* Админ-панель — только для администраторов */}
+      {user?.is_admin && (
+        <div className="px-3 pt-2">
+          <Link
+            to="/admin"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-[var(--fg-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--fg-primary)]"
+          >
+            <SettingsIcon size={18} />
+            <span>Админ-панель</span>
+          </Link>
+        </div>
+      )}
 
       {/* Профиль пользователя — открывает модал настроек */}
       <div className="border-t border-[var(--border-subtle)] p-3">
@@ -399,6 +567,8 @@ export default function Sidebar({
           {collapsed ? collapsedContent : fullContent}
         </motion.div>
       </AnimatePresence>
+
+      <AnimatePresence>{newChatDialog}</AnimatePresence>
     </motion.aside>
   );
 }

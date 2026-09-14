@@ -106,27 +106,6 @@ def make_auth_router(
             samesite="lax",
         )
 
-    @router.get("/auth/config")
-    async def auth_config() -> dict[str, Any]:
-        """Публичная конфигурация страницы входа — до всякой авторизации.
-
-        В light Telegram необязателен: установщик разрешает пропустить токен,
-        и тогда systemd поднимает только веб (scripts/run_web.py). Странице
-        входа надо знать об этом, иначе она предлагает войти через бота,
-        которого нет. Взять признак из /api/me нельзя — пользователя на этой
-        странице ещё нет.
-
-        Бот считается подключённым только при паре токен+username: без токена
-        его никто не запускает (обработать /weblogin некому), без username не
-        собрать Telegram Login Widget. Само имя бота публично по природе —
-        виджет светит его в DOM, — поэтому отдаём без авторизации.
-        """
-        enabled = bool(bot_token and bot_username)
-        return {
-            "telegram_enabled": enabled,
-            "telegram_bot_username": bot_username if enabled else "",
-        }
-
     @router.post("/auth/login")
     async def password_login(
         payload: dict[str, Any], response: Response, request: Request

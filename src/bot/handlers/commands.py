@@ -12,6 +12,7 @@ import structlog
 from src.bot.keyboards import (
     create_close_confirm_keyboard,
     create_mcp_catalog_keyboard,
+    create_project_keyboard,
     create_settings_keyboard,
 )
 from src.claude import SessionManager, SessionStatus, ClaudeBridge
@@ -337,6 +338,28 @@ async def cmd_status(message: Message) -> None:
         )
 
     await message.answer("\n".join(lines), parse_mode="HTML")
+
+
+@router.message(Command("projects"))
+async def cmd_projects(message: Message) -> None:
+    """Handle /projects command - list available projects."""
+    logger.info("/projects", user=message.from_user.username if message.from_user else "unknown")
+    settings: Settings = router.settings  # type: ignore
+    projects = settings.get_project_paths()
+
+    if not projects:
+        await message.answer(
+            onboarding.no_projects_message(settings.get_projects_directory()),
+            parse_mode="HTML",
+        )
+        return
+
+    await message.answer(
+        "<b>Доступные проекты:</b>\n\n"
+        "Выберите проект для переключения:",
+        reply_markup=create_project_keyboard(projects),
+        parse_mode="HTML",
+    )
 
 
 @router.message(Command("verbose"))

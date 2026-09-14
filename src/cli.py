@@ -1,4 +1,4 @@
-"""`vels` — небольшая CLI к Vels Claude Light.
+"""`vels` — небольшая CLI к Vels Claude.
 
 Главное назначение: после закрытия терминала легко узнать ТЕКУЩИЙ адрес веб-
 платформы и статус сервиса, не роясь в конфигах и логах.
@@ -90,7 +90,7 @@ def _cmd_url(settings, *, quiet: bool) -> int:
 
 def _cmd_status(settings, service: str) -> int:
     public, local, enabled = _web_base(settings)
-    print("Vels Claude Light — статус")
+    print("Vels Claude — статус")
     print(f"  Веб включён:     {'да' if enabled else 'нет'}")
     print(f"  Адрес:           {public or local}")
     print(f"  Локальный bind:  {local}")
@@ -105,7 +105,7 @@ def _cmd_status(settings, service: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="vels",
-        description="CLI к Vels Claude Light: адрес веб-платформы и статус.",
+        description="CLI к Vels Claude: адрес веб-платформы и статус.",
     )
     parser.add_argument(
         "--config",

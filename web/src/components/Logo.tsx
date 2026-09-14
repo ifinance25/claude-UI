@@ -9,7 +9,7 @@ export default function Logo() {
       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-hover)]">
         <ClaudeLogo size={20} />
       </div>
-      <span className="font-display text-lg font-semibold text-[var(--fg-primary)]">Vels Claude Light</span>
+      <span className="font-display text-lg font-semibold text-[var(--fg-primary)]">Vels Claude</span>
     </div>
   );
 }

@@ -48,6 +48,69 @@ def setup_callback_handlers(
     dp_router.include_router(router)
 
 
+@router.callback_query(lambda c: c.data and c.data.startswith("project:"))
+async def on_project_select(callback: CallbackQuery) -> None:
+    """Handle project selection."""
+    if not callback.data or not callback.message:
+        return
+
+    session_manager: SessionManager = router.session_manager  # type: ignore
+    settings: Settings = router.settings  # type: ignore
+
+    # Parse callback data: project:name
+    parts = callback.data.split(":", 1)
+    if len(parts) < 2:
+        await callback.answer("Неверные данные проекта")
+        return
+
+    project_name_short = parts[1]
+    
+    # Resolve full project path
+    projects = settings.get_project_paths()
+    project_path = None
+    project_name = project_name_short
+    
+    for p in projects:
+        if p.name[:50] == project_name_short:
+            project_path = str(p)
+            project_name = p.name  # Use full name
+            break
+            
+    if not project_path:
+        await callback.answer("Проект больше не найден. Обновите список через /projects")
+        return
+
+    topic_id = callback.message.message_thread_id
+
+    if not topic_id:
+        await callback.answer("Проект можно выбрать только внутри Топика")
+        return
+
+    # Create or update session
+    await session_manager.async_create_session(
+        topic_id=topic_id,
+        project_path=project_path,
+        project_name=project_name,
+        chat_id=callback.message.chat.id,
+    )
+
+    logger.info(
+        "📂 project_selected",
+        topic_id=topic_id,
+        project=project_name,
+        path=project_path,
+        user=callback.from_user.username if callback.from_user else "unknown",
+    )
+
+    await callback.answer(f"Проект: {project_name}")
+
+    # Update message
+    await callback.message.edit_text(
+        onboarding.project_ready_message(project_name, project_path),
+        parse_mode="HTML",
+    )
+
+
 @router.callback_query(lambda c: c.data == "close:confirm")
 async def on_close_confirm(callback: CallbackQuery) -> None:
     """Handle session close confirmation."""
@@ -210,6 +273,35 @@ async def on_settings(callback: CallbackQuery) -> None:
     except Exception as e:
         if "message is not modified" not in str(e):
             logger.debug("settings_keyboard_update_failed", error=str(e))
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith("page:"))
+async def on_page_navigate(callback: CallbackQuery) -> None:
+    """Handle project list pagination."""
+    if not callback.data or not callback.message:
+        return
+
+    # page:noop = the page counter button, just ignore
+    page_str = callback.data.split(":", 1)[1]
+    if page_str == "noop":
+        await callback.answer()
+        return
+
+    try:
+        page = int(page_str)
+    except ValueError:
+        await callback.answer("Ошибка навигации")
+        return
+
+    settings: Settings = router.settings  # type: ignore
+    projects = settings.get_project_paths()
+
+    from src.bot.keyboards import create_project_keyboard
+
+    keyboard = create_project_keyboard(projects, page=page)
+
+    await callback.answer()
+    await callback.message.edit_reply_markup(reply_markup=keyboard)
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("mcp:"))

@@ -96,14 +96,6 @@ export interface HistoryMessage {
   created_at: string;
 }
 
-// Публичная конфигурация страницы входа (/api/auth/config): её читают до
-// авторизации, когда user'а ещё нет. В light Telegram необязателен, и без бота
-// страница входа не должна о нём упоминать.
-export interface AuthConfig {
-  telegram_enabled: boolean;
-  telegram_bot_username: string;
-}
-
 export interface ApiUser {
   id: number;
   username: string;
